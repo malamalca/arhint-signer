@@ -1,0 +1,23 @@
+{
+  "name": "arhint-signer",
+  "version": "1.0.0",
+  "description": "ArhintSigner - Digital signature helper using Windows Certificate Store",
+  "main": "arhint-signer.js",
+  "bin": "arhint-signer.js",
+  "dependencies": {},
+  "devDependencies": {
+    "@yao-pkg/pkg": "^5.11.5"
+  },
+  "scripts": {
+    "build": "npx @yao-pkg/pkg . --target node20-win-x64 --output dist/arhint-signer.exe",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "pkg": {
+    "assets": [],
+    "targets": ["node20-win-x64"],
+    "outputPath": "dist"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

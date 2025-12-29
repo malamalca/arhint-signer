@@ -1,0 +1,47 @@
+dist/
+node_modules/
+
+.vscode/
+*.log
+.DS_Store
+*.env
+*.local
+*.pem
+*.crt
+*.key
+*.p12
+*.bak
+*.swp
+thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.~*
+# OS generated files
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+# IDE specific files
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.ncb
+*.opensdf
+*.sdf
+*.cache
+*.dbmdl
+*.opendb
+*.VC.db
+*.VC.VC.opendb
+*.tlog
+*.lastbuildstate
+*.ipch
+*.aps
+*.pch
+*.pdb
+*.ilk
+*.idb
+*.iobj

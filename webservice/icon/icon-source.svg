@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="256" height="256" fill="#1E3A8A"/>
+  
+  <!-- Certificate/Document -->
+  <rect x="40" y="40" width="140" height="176" rx="8" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="3"/>
+  
+  <!-- Certificate Lines (text representation) -->
+  <line x1="60" y1="70" x2="160" y2="70" stroke="#94A3B8" stroke-width="4" stroke-linecap="round"/>
+  <line x1="60" y1="90" x2="160" y2="90" stroke="#94A3B8" stroke-width="4" stroke-linecap="round"/>
+  <line x1="60" y1="110" x2="140" y2="110" stroke="#94A3B8" stroke-width="4" stroke-linecap="round"/>
+  
+  <!-- Seal/Badge -->
+  <circle cx="110" cy="155" r="35" fill="#3B82F6" stroke="#1E40AF" stroke-width="3"/>
+  <path d="M 110 130 L 120 145 L 140 140 L 125 155 L 130 175 L 110 165 L 90 175 L 95 155 L 80 140 L 100 145 Z" 
+        fill="#60A5FA" stroke="#1E40AF" stroke-width="2"/>
+  
+  <!-- Key Symbol -->
+  <g transform="translate(150, 100)">
+    <!-- Key Head (Circle) -->
+    <circle cx="40" cy="40" r="28" fill="#F59E0B" stroke="#D97706" stroke-width="4"/>
+    <circle cx="40" cy="40" r="12" fill="none" stroke="#D97706" stroke-width="4"/>
+    
+    <!-- Key Shaft -->
+    <rect x="-20" y="36" width="50" height="8" rx="2" fill="#F59E0B" stroke="#D97706" stroke-width="2"/>
+    
+    <!-- Key Teeth -->
+    <rect x="-20" y="32" width="6" height="12" fill="#F59E0B" stroke="#D97706" stroke-width="2"/>
+    <rect x="-12" y="28" width="6" height="16" fill="#F59E0B" stroke="#D97706" stroke-width="2"/>
+  </g>
+  
+  <!-- Ribbon/Award -->
+  <path d="M 90 185 L 90 210 L 110 200 L 130 210 L 130 185" 
+        fill="#EF4444" stroke="#B91C1C" stroke-width="2"/>
+</svg>

@@ -63,6 +63,15 @@ inline void handleRequest(HANDLE hReqQueue, PHTTP_REQUEST pRequest) {
                                   errorResponse.toString());
                 return;
             }
+            
+            // Security: Limit request body size to prevent DoS (max 10KB)
+            if (requestBody.length() > 10240) {
+                Json::Builder errorResponse;
+                errorResponse.addString("error", "Request body too large (max 10KB)");
+                Http::sendResponse(hReqQueue, pRequest->RequestId, 413, "application/json", 
+                                  errorResponse.toString());
+                return;
+            }
 
             std::cout << "Request body: " << requestBody << std::endl;
 
@@ -79,13 +88,62 @@ inline void handleRequest(HANDLE hReqQueue, PHTTP_REQUEST pRequest) {
                                   errorResponse.toString());
                 return;
             }
+            
+            // Security: Validate hash parameter (base64 encoded, reasonable length)
+            const std::string& hash = params["hash"];
+            if (hash.empty() || hash.length() > 1024) {
+                Json::Builder errorResponse;
+                errorResponse.addString("error", "Invalid hash parameter (max 1024 chars)");
+                Http::sendResponse(hReqQueue, pRequest->RequestId, 400, "application/json", 
+                                  errorResponse.toString());
+                return;
+            }
+            
+            // Security: Validate thumbprint (40 hex chars for SHA1)
+            const std::string& thumbprint = params["thumbprint"];
+            if (thumbprint.length() != 40) {
+                Json::Builder errorResponse;
+                errorResponse.addString("error", "Invalid thumbprint (must be 40 hex characters)");
+                Http::sendResponse(hReqQueue, pRequest->RequestId, 400, "application/json", 
+                                  errorResponse.toString());
+                return;
+            }
+            
+            // Security: Validate thumbprint contains only hex characters
+            for (char c : thumbprint) {
+                if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))) {
+                    Json::Builder errorResponse;
+                    errorResponse.addString("error", "Invalid thumbprint (must contain only hex characters)");
+                    Http::sendResponse(hReqQueue, pRequest->RequestId, 400, "application/json", 
+                                      errorResponse.toString());
+                    return;
+                }
+            }
 
             // Sign the hash
-            std::string signature = Certificate::signHash(params["hash"], params["thumbprint"]);
-            Json::Builder response;
-            response.addString("result", signature);
-            Http::sendResponse(hReqQueue, pRequest->RequestId, 200, "application/json", 
-                             response.toString());
+            try {
+                std::string signature = Certificate::signHash(params["hash"], params["thumbprint"]);
+                Json::Builder response;
+                response.addString("result", signature);
+                Http::sendResponse(hReqQueue, pRequest->RequestId, 200, "application/json", 
+                                 response.toString());
+            }
+            catch (const std::exception& ex) {
+                std::string errorMsg = ex.what();
+                // Check if this is a validation error (user input error) or server error
+                bool isValidationError = 
+                    errorMsg.find("Invalid") != std::string::npos ||
+                    errorMsg.find("required") != std::string::npos ||
+                    errorMsg.find("must be") != std::string::npos ||
+                    errorMsg.find("Expected") != std::string::npos ||
+                    errorMsg.find("not found") != std::string::npos;
+                
+                int statusCode = isValidationError ? 400 : 500;
+                Json::Builder errorResponse;
+                errorResponse.addString("error", errorMsg);
+                Http::sendResponse(hReqQueue, pRequest->RequestId, static_cast<USHORT>(statusCode), "application/json", 
+                                  errorResponse.toString());
+            }
             return;
         }
 

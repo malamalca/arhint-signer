@@ -5,8 +5,12 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <atomic>
 
 #pragma comment(lib, "httpapi.lib")
+
+// Forward declare global running flag
+extern std::atomic<bool> g_running;
 
 namespace ArhintSigner {
 namespace Server {
@@ -115,8 +119,6 @@ public:
         if (!initialized) {
             return;
         }
-
-        extern std::atomic<bool> g_running;
 
         ULONG requestBufferSize = sizeof(HTTP_REQUEST) + 2048;
         std::vector<BYTE> requestBuffer(requestBufferSize);

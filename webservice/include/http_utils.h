@@ -107,6 +107,8 @@ inline std::string readRequestBody(HANDLE hReqQueue, PHTTP_REQUEST pRequest) {
     
     // If not available, read the entity body
     if (requestBody.empty()) {
+        // Security: Limit buffer size to prevent excessive memory allocation
+        const ULONG MAX_REQUEST_SIZE = 10240; // 10KB max
         std::vector<char> buffer(4096);
         ULONG bytesRead = 0;
         
@@ -120,7 +122,8 @@ inline std::string readRequestBody(HANDLE hReqQueue, PHTTP_REQUEST pRequest) {
             nullptr);
         
         if (result == NO_ERROR || result == ERROR_HANDLE_EOF) {
-            if (bytesRead > 0) {
+            // Security: Validate bytes read doesn't exceed buffer size
+            if (bytesRead > 0 && bytesRead <= buffer.size() && bytesRead <= MAX_REQUEST_SIZE) {
                 requestBody = std::string(buffer.data(), bytesRead);
             }
         }

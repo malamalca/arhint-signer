@@ -66,6 +66,7 @@ inline std::string listCertificates() {
             &keySpec, 
             &freeProvOrKey);
 
+        // Release cryptographic provider/key if acquired
         if (freeProvOrKey && hCryptProvOrNCryptKey) {
             if (keySpec == CERT_NCRYPT_KEY_SPEC) {
                 NCryptFreeObject(hCryptProvOrNCryptKey);
@@ -189,7 +190,14 @@ inline std::string signHash(const std::string& hashB64Input, const std::string& 
     // Decode hash
     std::vector<BYTE> hashBytes = Crypto::base64Decode(hashB64);
     if (hashBytes.empty()) {
-        throw std::runtime_error("Invalid base64 hash");
+        throw std::runtime_error("Invalid base64 hash - unable to decode");
+    }
+    
+    // Validate hash length (SHA-256 = 32 bytes, SHA-1 = 20 bytes, SHA-512 = 64 bytes)
+    if (hashBytes.size() != 32 && hashBytes.size() != 20 && hashBytes.size() != 64) {
+        std::string error = "Invalid hash length: " + std::to_string(hashBytes.size()) + 
+                          " bytes. Expected 20 (SHA-1), 32 (SHA-256), or 64 (SHA-512) bytes";
+        throw std::runtime_error(error);
     }
 
     // Open certificate store
@@ -202,9 +210,19 @@ inline std::string signHash(const std::string& hashB64Input, const std::string& 
     CRYPT_HASH_BLOB hashBlob;
     BYTE thumbprintBytes[20];
     
-    // Convert hex string to bytes
-    for (size_t i = 0; i < 20 && i * 2 < thumbprint.length(); i++) {
-        sscanf_s(thumbprint.c_str() + (i * 2), "%2hhx", &thumbprintBytes[i]);
+    // Security: Validate thumbprint length before conversion
+    if (thumbprint.length() != 40) {
+        CertCloseStore(hStore, 0);
+        throw std::runtime_error("Invalid thumbprint length (expected 40 hex characters)");
+    }
+    
+    // Convert hex string to bytes with bounds checking
+    for (size_t i = 0; i < 20; i++) {
+        int result = sscanf_s(thumbprint.c_str() + (i * 2), "%2hhx", &thumbprintBytes[i]);
+        if (result != 1) {
+            CertCloseStore(hStore, 0);
+            throw std::runtime_error("Invalid thumbprint format (must be hex)");
+        }
     }
     
     hashBlob.cbData = 20;
@@ -268,7 +286,11 @@ inline std::string signHash(const std::string& hashB64Input, const std::string& 
             if (status != 0) {
                 std::cerr << "NCryptSignHash (get size) failed with status: 0x" 
                          << std::hex << status << std::endl;
-                throw std::runtime_error("Failed to get signature size");
+                if (status == 0x80090027) { // NTE_BAD_DATA
+                    throw std::runtime_error("Invalid hash data - hash may be corrupted or wrong length for algorithm");
+                }
+                throw std::runtime_error("Failed to get signature size (status: 0x" + 
+                                       std::to_string(status) + ")");
             }
 
             std::vector<BYTE> signature(signatureSize);
@@ -285,7 +307,11 @@ inline std::string signHash(const std::string& hashB64Input, const std::string& 
             if (status != 0) {
                 std::cerr << "NCryptSignHash failed with status: 0x" 
                          << std::hex << status << std::endl;
-                throw std::runtime_error("Failed to sign hash");
+                if (status == 0x80090027) { // NTE_BAD_DATA
+                    throw std::runtime_error("Invalid hash data - hash may be corrupted or wrong length for algorithm");
+                }
+                throw std::runtime_error("Failed to sign hash (status: 0x" + 
+                                       std::to_string(status) + ")");
             }
 
             signatureB64 = Crypto::base64Encode(signature.data(), signatureSize);

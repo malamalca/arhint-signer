@@ -35,6 +35,10 @@ std::atomic<bool> g_running(true);
 SystemTray::TrayIcon* g_trayIcon = nullptr;
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+    UNREFERENCED_PARAMETER(hInstance);
+    UNREFERENCED_PARAMETER(hPrevInstance);
+    UNREFERENCED_PARAMETER(nCmdShow);
+    
     // No console created at startup - prevents flicker and taskbar icon
     // Console will be allocated only when user requests it via tray menu
     

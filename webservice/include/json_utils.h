@@ -79,6 +79,11 @@ public:
 inline std::map<std::string, std::string> parse(const std::string& json) {
     std::map<std::string, std::string> result;
     
+    // Security: Prevent regex DoS with input size limit
+    if (json.length() > 10240) {
+        throw std::runtime_error("JSON input too large (max 10KB)");
+    }
+    
     std::regex keyValueRegex("\"([^\"]+)\"\\s*:\\s*\"([^\"]+)\"");
     auto begin = std::sregex_iterator(json.begin(), json.end(), keyValueRegex);
     auto end = std::sregex_iterator();

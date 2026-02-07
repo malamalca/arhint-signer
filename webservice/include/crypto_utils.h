@@ -19,21 +19,37 @@ inline std::string base64Encode(const BYTE* data, DWORD length) {
     }
 
     std::vector<char> base64(base64Length);
+    DWORD actualLength = base64Length;
     if (!CryptBinaryToStringA(data, length, CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF, 
-                              base64.data(), &base64Length)) {
+                              base64.data(), &actualLength)) {
         return "";
     }
 
-    return std::string(base64.data(), base64Length - 1);
+    // actualLength now contains the actual string length including null terminator
+    // Return string excluding the null terminator
+    if (actualLength > 0 && base64[actualLength - 1] == '\0') {
+        return std::string(base64.data(), actualLength - 1);
+    }
+    return std::string(base64.data(), actualLength);
 }
 
 /**
  * Base64 decoding using Windows CryptoAPI
  */
 inline std::vector<BYTE> base64Decode(const std::string& base64) {
+    // Security: Limit input size to prevent DoS (max 1MB base64 = ~750KB decoded)
+    if (base64.length() > 1048576) {
+        return {};
+    }
+    
     DWORD dataLength = 0;
     if (!CryptStringToBinaryA(base64.c_str(), 0, CRYPT_STRING_BASE64, 
                               nullptr, &dataLength, nullptr, nullptr)) {
+        return {};
+    }
+    
+    // Security: Sanity check decoded size
+    if (dataLength > 1048576) {
         return {};
     }
 

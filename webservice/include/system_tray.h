@@ -135,9 +135,9 @@ public:
                     SetConsoleTitleW(L"ArhintSigner Web Service - Console");
                     
                     // Disable the close button on console window
-                    HMENU hMenu = GetSystemMenu(consoleWnd, FALSE);
-                    if (hMenu) {
-                        DeleteMenu(hMenu, SC_CLOSE, MF_BYCOMMAND);
+                    HMENU hSysMenu = GetSystemMenu(consoleWnd, FALSE);
+                    if (hSysMenu) {
+                        DeleteMenu(hSysMenu, SC_CLOSE, MF_BYCOMMAND);
                     }
                     
                     // Print initial message

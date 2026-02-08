@@ -1,26 +1,20 @@
 # ArhintSigner Web Service
 
-A C++ HTTP server implementation that provides digital signature services using Windows Certificate Store, bypassing the need for a Chrome extension.
+A C++ HTTP server implementation that provides digital signature services using Windows Certificate Store.
 
 ## Overview
 
-This project replaces the Chrome Extension + Native Messaging Host architecture with a simple HTTP web service that can be called directly from JavaScript in any web browser.
+This project provides a simple HTTP web service that can be called directly from JavaScript in any web browser.
 
-### Architecture Comparison
+### Architecture
 
-**Original System:**
-```
-HTML Page → Chrome Extension → Native Messaging → C++ Executable
-```
-
-**New Web Service System:**
 ```
 HTML Page → HTTP Request → C++ Web Service (HTTP.sys)
 ```
 
 ## Features
 
-- ✅ **Direct HTTP API** - No Chrome extension required
+- ✅ **Direct HTTP API** - No browser extension required
 - ✅ **CORS Support** - Works with any web page
 - ✅ **Same Functionality** - List certificates and sign hashes
 - ✅ **Windows Certificate Store** - Uses system certificates with private keys
@@ -202,7 +196,7 @@ Content-Type: application/json
 
 2. **Open the demo page:**
    - Simply open `example-webservice.html` in any web browser
-   - No Chrome extension needed!
+   - Works directly with the HTTP API!
 
 3. **Test the functionality:**
    - Click "Generate Test Hash" to create a sample hash
@@ -323,18 +317,6 @@ netsh http add urlacl url=http://+:8082/ user=Everyone
 - `installer-webservice.nsi` - NSIS installer script
 - `build-installer.bat` - Script to build the installer
 - `README-webservice.md` - This file
-
-## Comparison with Chrome Extension Version
-
-| Feature | Chrome Extension | Web Service |
-|---------|-----------------|-------------|
-| Browser Support | Chrome only | Any browser |
-| Installation | Extension + Native Host | Single executable |
-| Permissions | Extension permissions | URL reservation |
-| Updates | Extension store | Manual update |
-| Debugging | Chrome DevTools + stderr | Console + stderr |
-| Performance | Two-process overhead | Direct HTTP |
-| Security | Extension sandbox | Network binding |
 
 ## Advanced Configuration
 

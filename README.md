@@ -16,14 +16,6 @@ arhint-signer-webservice.exe
 
 Then open `example-webservice.html` in any browser. Works with Chrome, Firefox, Edge, etc.
 
-### Option 2: Chrome Extension (For Chrome-specific integration)
-**Native messaging host for Chrome/Edge extensions**
-
-```bash
-cd chrome-extension
-# Build and install - see chrome-extension/README.md
-```
-
 ## 📁 Project Structure
 
 ```
@@ -35,37 +27,20 @@ arhint-signer/
 │   ├── Makefile-webservice
 │   └── README-webservice.md
 │
-├── chrome-extension/        # Chrome Extension + Native Messaging
-│   ├── arhint-signer.cpp    (C++ native host)
-│   ├── arhint-signer.cs     (C# alternative)
-│   ├── arhint-signer.js     (Node.js alternative)
-│   ├── example.html
-│   ├── installer.nsi
-│   ├── Makefile
-│   └── README.md
-│
 └── LICENSE.txt
 ```
 
-## 🎯 Which One to Use?
+## 🎯 Features
 
-### Use **Web Service** if you want:
 - ✅ Browser-independent solution (works in any browser)
 - ✅ Simpler architecture (no extension needed)
 - ✅ Direct JavaScript API calls via fetch/axios
 - ✅ Easier deployment and updates
 - ✅ Modern web application integration
 
-### Use **Chrome Extension** if you need:
-- ✅ Deep Chrome/Edge extension integration
-- ✅ Browser extension ecosystem features
-- ✅ Extension permissions and sandboxing
-- ✅ Chrome Web Store distribution
-
 ## 📖 Documentation
 
-- **Web Service**: See [webservice/README-webservice.md](webservice/README-webservice.md)
-- **Chrome Extension**: See [chrome-extension/README.md](chrome-extension/README.md)
+- See [webservice/README-webservice.md](webservice/README-webservice.md) for complete guide
 
 ## 🔧 Features (Both Implementations)
 
@@ -77,18 +52,10 @@ arhint-signer/
 
 ## 🛠️ Building
 
-### Web Service
 ```bash
 cd webservice
 # Using Visual Studio Build Tools:
 cmd /c ""C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat" && cl /EHsc /O2 /Fe:arhint-signer-webservice.exe arhint-signer-webservice.cpp httpapi.lib crypt32.lib ncrypt.lib ws2_32.lib advapi32.lib"
-```
-
-### Chrome Extension
-```bash
-cd chrome-extension
-# Using Visual Studio Build Tools:
-cmd /c ""C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat" && cl /EHsc /O2 /Fe:arhint-signer.exe arhint-signer.cpp crypt32.lib ncrypt.lib bcrypt.lib advapi32.lib"
 ```
 
 ## 📋 Requirements
@@ -99,7 +66,7 @@ cmd /c ""C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxil
 
 ## 🔐 Security Notes
 
-Both implementations access the Windows Certificate Store and require user interaction to select certificates. The web service includes CORS headers for local development - modify for production use.
+The web service accesses the Windows Certificate Store and requires user interaction to select certificates. It includes CORS headers for local development - modify for production use.
 
 ## 📄 License
 
@@ -111,14 +78,10 @@ Contributions are welcome! Please feel free to submit issues or pull requests.
 
 ---
 
-**Architecture Comparison:**
+**Architecture:**
 
 ```
-Chrome Extension:
-HTML → Chrome Extension → Native Messaging → C++ Executable
-
-Web Service:
 HTML → HTTP Fetch API → C++ HTTP Server
 ```
 
-The web service approach eliminates the Chrome extension layer, making it simpler and more universal.
+Direct HTTP communication provides a simple, browser-independent solution.

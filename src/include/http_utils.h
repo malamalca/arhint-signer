@@ -107,26 +107,35 @@ inline std::string readRequestBody(HANDLE hReqQueue, PHTTP_REQUEST pRequest) {
     
     // If not available, read the entity body
     if (requestBody.empty()) {
-        // Security: Limit buffer size to prevent excessive memory allocation
+        // Security: Limit total body size to prevent excessive memory allocation
         const ULONG MAX_REQUEST_SIZE = 10240; // 10KB max
-        std::vector<char> buffer(4096);
+        const ULONG CHUNK_SIZE = 4096;
+        std::vector<char> buffer(CHUNK_SIZE);
         ULONG bytesRead = 0;
+        ULONG totalRead = 0;
         
-        ULONG result = HttpReceiveRequestEntityBody(
-            hReqQueue,
-            pRequest->RequestId,
-            0,
-            buffer.data(),
-            (ULONG)buffer.size(),
-            &bytesRead,
-            nullptr);
-        
-        if (result == NO_ERROR || result == ERROR_HANDLE_EOF) {
-            // Security: Validate bytes read doesn't exceed buffer size
-            if (bytesRead > 0 && bytesRead <= buffer.size() && bytesRead <= MAX_REQUEST_SIZE) {
-                requestBody = std::string(buffer.data(), bytesRead);
+        ULONG result;
+        do {
+            bytesRead = 0;
+            result = HttpReceiveRequestEntityBody(
+                hReqQueue,
+                pRequest->RequestId,
+                0,
+                buffer.data(),
+                CHUNK_SIZE,
+                &bytesRead,
+                nullptr);
+            
+            if (bytesRead > 0 && bytesRead <= CHUNK_SIZE) {
+                if (totalRead + bytesRead > MAX_REQUEST_SIZE) {
+                    // Body exceeds size limit - truncate and stop
+                    requestBody.append(buffer.data(), MAX_REQUEST_SIZE - totalRead);
+                    break;
+                }
+                requestBody.append(buffer.data(), bytesRead);
+                totalRead += bytesRead;
             }
-        }
+        } while (result == NO_ERROR);
     }
     
     return requestBody;

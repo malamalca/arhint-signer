@@ -22,12 +22,12 @@ namespace Certificate {
 /**
  * Get certificate name as a string
  */
-inline std::string getCertNameString(PCCERT_CONTEXT certContext, DWORD type) {
-    DWORD size = CertGetNameStringA(certContext, type, 0, nullptr, nullptr, 0);
+inline std::string getCertNameString(PCCERT_CONTEXT certContext, DWORD type, DWORD flags = 0) {
+    DWORD size = CertGetNameStringA(certContext, type, flags, nullptr, nullptr, 0);
     if (size <= 1) return "";
     
     std::vector<char> name(size);
-    CertGetNameStringA(certContext, type, 0, nullptr, name.data(), size);
+    CertGetNameStringA(certContext, type, flags, nullptr, name.data(), size);
     return std::string(name.data());
 }
 
@@ -83,7 +83,7 @@ inline std::string listCertificates() {
         try {
             // Get subject and issuer
             std::string subject = getCertNameString(certContext, CERT_NAME_SIMPLE_DISPLAY_TYPE);
-            std::string issuer = getCertNameString(certContext, CERT_NAME_SIMPLE_DISPLAY_TYPE);
+            std::string issuer = getCertNameString(certContext, CERT_NAME_SIMPLE_DISPLAY_TYPE, CERT_NAME_ISSUER_FLAG);
             
             // Get full DN string for parsing
             DWORD subjectSize = CertNameToStrA(X509_ASN_ENCODING, &certContext->pCertInfo->Subject,
@@ -285,7 +285,7 @@ inline std::string signHash(const std::string& hashB64Input, const std::string& 
 
             if (status != 0) {
                 std::cerr << "NCryptSignHash (get size) failed with status: 0x" 
-                         << std::hex << status << std::endl;
+                         << std::hex << status << std::dec << std::endl;
                 if (status == 0x80090027) { // NTE_BAD_DATA
                     throw std::runtime_error("Invalid hash data - hash may be corrupted or wrong length for algorithm");
                 }
@@ -306,7 +306,7 @@ inline std::string signHash(const std::string& hashB64Input, const std::string& 
 
             if (status != 0) {
                 std::cerr << "NCryptSignHash failed with status: 0x" 
-                         << std::hex << status << std::endl;
+                         << std::hex << status << std::dec << std::endl;
                 if (status == 0x80090027) { // NTE_BAD_DATA
                     throw std::runtime_error("Invalid hash data - hash may be corrupted or wrong length for algorithm");
                 }

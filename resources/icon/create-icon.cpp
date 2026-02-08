@@ -123,7 +123,7 @@ bool CreateIconFile(const char* filename, int size) {
     
     void* pBits = nullptr;
     HBITMAP hBitmap = CreateDIBSection(hdcMem, &bmi, DIB_RGB_COLORS, &pBits, NULL, 0);
-    SelectObject(hdcMem, hBitmap);
+    HGDIOBJ hOldBitmap = SelectObject(hdcMem, hBitmap);
     
     // Draw icon
     DrawCertificateIcon(hdcMem, size);
@@ -136,6 +136,7 @@ bool CreateIconFile(const char* filename, int size) {
     // Create ICO file
     std::ofstream file(filename, std::ios::binary);
     if (!file) {
+        SelectObject(hdcMem, hOldBitmap);
         DeleteObject(hBitmap);
         DeleteDC(hdcMem);
         ReleaseDC(NULL, hdcScreen);
@@ -151,7 +152,10 @@ bool CreateIconFile(const char* filename, int size) {
     iconEntry.bColorCount = 0;
     iconEntry.wPlanes = 1;
     iconEntry.wBitCount = 32;
-    iconEntry.dwBytesInRes = sizeof(BITMAPINFOHEADER) + imageSize;
+    // AND mask rows must be DWORD-aligned
+    int andMaskRowStride = ((size + 31) / 32) * 4;
+    DWORD andMaskSize = andMaskRowStride * size;
+    iconEntry.dwBytesInRes = sizeof(BITMAPINFOHEADER) + imageSize + andMaskSize;
     iconEntry.dwImageOffset = sizeof(ICONDIR) + sizeof(ICONDIRENTRY);
     file.write((char*)&iconEntry, sizeof(iconEntry));
     
@@ -164,11 +168,13 @@ bool CreateIconFile(const char* filename, int size) {
     file.write((char*)pBits, imageSize);
     
     // Write AND mask (all transparent)
-    std::vector<BYTE> andMask(size * size / 8, 0);
+    // AND mask rows must be DWORD-aligned: row stride = ((width + 31) / 32) * 4
+    std::vector<BYTE> andMask(andMaskSize, 0);
     file.write((char*)andMask.data(), andMask.size());
     
     file.close();
     
+    SelectObject(hdcMem, hOldBitmap);
     DeleteObject(hBitmap);
     DeleteDC(hdcMem);
     ReleaseDC(NULL, hdcScreen);

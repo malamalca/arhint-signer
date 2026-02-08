@@ -94,14 +94,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         DispatchMessage(&msg);
     }
 
-    // Cleanup
-    trayIcon.cleanup();
+    // Cleanup: shutdown server first to unblock the HTTP thread
+    g_running = false;
     server.shutdown();
     
     // Wait for HTTP thread to finish
     if (httpThread.joinable()) {
         httpThread.join();
     }
+    
+    trayIcon.cleanup();
     
     return 0;
 }

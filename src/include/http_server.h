@@ -167,8 +167,8 @@ public:
             return false;
         }
 
-        static ULONG requestBufferSize = sizeof(HTTP_REQUEST) + 2048;
-        static std::vector<BYTE> requestBuffer(requestBufferSize);
+        ULONG requestBufferSize = sizeof(HTTP_REQUEST) + 2048;
+        std::vector<BYTE> requestBuffer(requestBufferSize);
         PHTTP_REQUEST pRequest = (PHTTP_REQUEST)requestBuffer.data();
 
         RtlZeroMemory(pRequest, requestBufferSize);

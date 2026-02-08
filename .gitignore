@@ -44,4 +44,4 @@ $RECYCLE.BIN/
 *.pdb
 *.ilk
 *.idb
-*.iobj
+*.iobj*.obj

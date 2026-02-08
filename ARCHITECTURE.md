@@ -9,28 +9,39 @@ The codebase has been refactored from a single monolithic file (~840 lines) into
 ## Architecture
 
 ```
-webservice/
-├── arhint-signer-webservice.cpp    (Main entry point - ~100 lines)
-└── include/
-    ├── http_server.h               (HTTP server management)
-    ├── request_handler.h           (Request routing & endpoints)
-    ├── certificate_manager.h       (Certificate operations)
-    ├── http_utils.h                (HTTP utilities)
-    ├── json_utils.h                (JSON serialization)
-    ├── crypto_utils.h              (Cryptography utilities)
-    ├── string_utils.h              (String manipulation)
-    └── system_tray.h               (System tray icon management)
+arhint-signer/
+├── src/
+│   ├── arhint-signer.cpp           (Main entry point - ~100 lines)
+│   └── include/
+│       ├── http_server.h               (HTTP server management)
+│       ├── request_handler.h           (Request routing & endpoints)
+│       ├── certificate_manager.h       (Certificate operations)
+│       ├── http_utils.h                (HTTP utilities)
+│       ├── json_utils.h                (JSON serialization)
+│       ├── crypto_utils.h              (Cryptography utilities)
+│       ├── string_utils.h              (String manipulation)
+│       └── system_tray.h               (System tray icon management)
+├── resources/
+│   ├── app-resource.rc
+│   └── icon/
+├── release/
+│   └── arhint-signer.exe
+├── examples/
+│   └── example-arhint-signer.html
+├── installer/
+│   └── installer-arhint-signer.nsi
+└── Makefile
 ```
 
 ## Module Responsibilities
 
-### 1. **arhint-signer-webservice.cpp** (Main Entry Point)
+### 1. **arhint-signer.cpp** (Main Entry Point)
 - Minimal main file (~47 lines)
 - Command-line argument parsing
 - Server initialization and startup
 - Clean, easy to understand program flow
 
-### 2. **include/http_server.h** (Server Management)
+### 2. **src/include/http_server.h** (Server Management)
 **Namespace:** `ArhintSigner::Server`
 
 **Class:** `HttpServer`
@@ -45,7 +56,7 @@ webservice/
 - `processRequests()` - Main request loop (template method)
 - `shutdown()` - Clean resource cleanup
 
-### 3. **include/request_handler.h** (Request Routing)
+### 3. **src/include/request_handler.h** (Request Routing)
 **Namespace:** `ArhintSigner::RequestHandler`
 
 **Functions:**
@@ -59,7 +70,7 @@ webservice/
 - `POST /sign` - Sign a hash with a certificate
 - `OPTIONS *` - CORS preflight
 
-### 4. **include/certificate_manager.h** (Certificate Operations)
+### 4. **src/include/certificate_manager.h** (Certificate Operations)
 **Namespace:** `ArhintSigner::Certificate`
 
 **Functions:**
@@ -73,7 +84,7 @@ webservice/
 - Certificate validation (expiration, private key availability)
 - Proper resource cleanup with RAII principles
 
-### 5. **include/http_utils.h** (HTTP Utilities)
+### 5. **src/include/http_utils.h** (HTTP Utilities)
 **Namespace:** `ArhintSigner::Http`
 
 **Functions:**
@@ -86,7 +97,7 @@ webservice/
 - Status code mapping
 - Body chunk reading
 
-### 6. **include/json_utils.h** (JSON Utilities)
+### 6. **src/include/json_utils.h** (JSON Utilities)
 **Namespace:** `ArhintSigner::Json`
 
 **Class:** `Builder`
@@ -97,7 +108,7 @@ webservice/
 **Functions:**
 - `parse()` - Basic JSON parsing for request parameters
 
-### 7. **include/crypto_utils.h** (Cryptography Utilities)
+### 7. **src/include/crypto_utils.h** (Cryptography Utilities)
 **Namespace:** `ArhintSigner::Crypto`
 
 **Functions:**
@@ -106,7 +117,7 @@ webservice/
 
 Uses Windows CryptoAPI for encoding/decoding.
 
-### 8. **include/string_utils.h** (String Utilities)
+### 8. **src/include/string_utils.h** (String Utilities)
 **Namespace:** `ArhintSigner::Utils`
 
 **Functions:**
@@ -115,7 +126,7 @@ Uses Windows CryptoAPI for encoding/decoding.
 - `fileTimeToShortDate()` - Convert FILETIME to short format
 - `trim()` - Remove whitespace from strings
 
-### 9. **include/system_tray.h** (System Tray Management)
+### 9. **src/include/system_tray.h** (System Tray Management)
 **Namespace:** `ArhintSigner::SystemTray`
 
 **Class:** `TrayIcon`
@@ -216,8 +227,8 @@ Most modules are header-only with inline functions:
 All modules are included via headers. Single compilation unit:
 
 ```bash
-cl /std:c++17 /EHsc /O2 /W3 arhint-signer-webservice.cpp 
-   /Fearhint-signer-webservice.exe 
+cl /std:c++17 /EHsc /O2 /W3 /I"src/include" src/arhint-signer.cpp 
+   /Ferelease/arhint-signer.exe 
    /link httpapi.lib crypt32.lib ncrypt.lib ws2_32.lib advapi32.lib
 ```
 
@@ -226,17 +237,17 @@ cl /std:c++17 /EHsc /O2 /W3 arhint-signer-webservice.cpp
 Potential enhancements while maintaining the architecture:
 
 1. **Configuration Module**
-   - Add `include/config.h` for server settings
+   - Add `src/include/config.h` for server settings
    - Support for configuration files
    - Environment variable parsing
 
 3. **Logging Module**
-   - Add `include/logger.h` for structured logging
+   - Add `src/include/logger.h` for structured logging
    - Log levels (debug, info, warn, error)
    - File and console output
 
 4. **Authentication**
-   - Add `include/auth.h` for API key validation
+   - Add `src/include/auth.h` for API key validation
    - Token-based authentication
 
 4. **Certificate Filtering**
@@ -247,16 +258,3 @@ Potential enhancements while maintaining the architecture:
 5. **Response Caching**
    - Cache certificate lists
    - Configurable cache expiration
-
-## Migration from Old Code
-
-The old monolithic file has been backed up as `arhint-signer-webservice-old.cpp`.
-
-**Changes:**
-- All functionality preserved
-- Same API endpoints and behavior
-- Improved code organization
-- Better error handling
-- Easier to maintain and extend
-
-**No breaking changes** - The service operates identically to the previous version.

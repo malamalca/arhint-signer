@@ -3,14 +3,15 @@
 
 CXX = cl
 RC = rc
-CXXFLAGS = /std:c++17 /EHsc /O2 /W3
+CXXFLAGS = /std:c++17 /EHsc /O2 /W3 /I"src/include"
 LDFLAGS = /SUBSYSTEM:WINDOWS /ENTRY:WinMainCRTStartup httpapi.lib crypt32.lib ncrypt.lib ws2_32.lib advapi32.lib shell32.lib user32.lib
-TARGET = arhint-signer-webservice.exe
-SOURCE = arhint-signer-webservice.cpp
-RESOURCE = app-resource.rc
-RESOURCE_OBJ = app-resource.res
-ICON_GEN = icon\create-icon.exe
-ICON_SOURCE = icon\create-icon.cpp
+RELEASE_DIR = release
+TARGET = $(RELEASE_DIR)\arhint-signer.exe
+SOURCE = src\arhint-signer.cpp
+RESOURCE = resources\app-resource.rc
+RESOURCE_OBJ = resources\app-resource.res
+ICON_GEN = resources\icon\create-icon.exe
+ICON_SOURCE = resources\icon\create-icon.cpp
 
 .PHONY: all clean run icons
 
@@ -18,7 +19,7 @@ all: icons $(TARGET)
 
 icons: $(ICON_GEN)
 	@echo Generating icon files...
-	@$(ICON_GEN)
+	@cd resources\icon && ..\..\$(ICON_GEN)
 	@echo Icon generation complete.
 
 $(ICON_GEN): $(ICON_SOURCE)
@@ -31,6 +32,7 @@ $(RESOURCE_OBJ): $(RESOURCE)
 	$(RC) /fo $(RESOURCE_OBJ) $(RESOURCE)
 
 $(TARGET): $(SOURCE) $(RESOURCE_OBJ)
+	@if not exist $(RELEASE_DIR) mkdir $(RELEASE_DIR)
 	@echo Building ArhintSigner Web Service...
 	$(CXX) $(CXXFLAGS) $(SOURCE) $(RESOURCE_OBJ) /Fe$(TARGET) /link $(LDFLAGS)
 	@echo Build complete: $(TARGET)
@@ -40,6 +42,8 @@ clean:
 	@if exist $(TARGET) del /F $(TARGET)
 	@if exist $(RESOURCE_OBJ) del /F $(RESOURCE_OBJ)
 	@if exist $(ICON_GEN) del /F $(ICON_GEN)
+	@if exist *.obj del /F *.obj
+	@if exist $(RELEASE_DIR) rmdir $(RELEASE_DIR)
 	@if exist icon\app-icon-*.ico del /F icon\app-icon-*.ico
 	@echo Clean complete.
 
@@ -64,8 +68,8 @@ help:
 	@echo.
 	@echo Usage:
 	@echo   1. Build: make
-	@echo   2. Run:   arhint-signer-webservice.exe [port]
-	@echo   3. Test:  Open example-webservice.html in your browser
+	@echo   2. Run:   arhint-signer.exe [port]
+	@echo   3. Test:  Open example-arhint-signer.html in your browser
 	@echo.
 	@echo Requirements:
 	@echo   - MinGW-w64 (g++ compiler)

@@ -2,7 +2,7 @@
 
 ## Quick Install
 
-1. **Run the installer**: `ArhintSigner-WebService-Setup.exe`
+1. **Run the installer**: `ArhintSigner-Setup.exe`
 2. **Follow the installation wizard**
 3. **When prompted, check "Reserve HTTP URL"** (recommended)
 4. **Click "Start ArhintSigner Web Service"** on the final screen
@@ -24,6 +24,8 @@
 
 - **Desktop**: Shortcut to start the service
 
+- **Auto-start (Optional)**: Configure the service to start automatically when Windows starts
+
 ## First Time Setup
 
 ### Reserve the HTTP URL (Important!)
@@ -39,20 +41,38 @@ The service needs permission to listen on port 8082. You have two options:
 
 This only needs to be done once.
 
+### Auto-start Configuration (Optional)
+
+During installation, you can choose to have the service start automatically when Windows boots:
+
+- Check the box "Auto-start on Windows Startup" during installation
+- The service will launch in the system tray on every Windows startup
+- You can disable this later by removing the registry entry from:
+  `HKLM\Software\Microsoft\Windows\CurrentVersion\Run\ArhintSignerWS`
+
 ## Using the Service
 
 ### Start the Service
 
 - **From Start Menu**: ArhintSigner Web Service → Start Web Service
 - **From Desktop**: Double-click "ArhintSigner Web Service" shortcut
-- **Manually**: Run `arhint-signer-webservice.exe` from installation folder
+- **Manually**: Run `arhint-signer.exe` from installation folder (or `release\arhint-signer.exe` if building from source)
+- **Auto-start**: If enabled during installation, starts automatically with Windows
 
 The service will run on: `http://localhost:8082`
+
+### View Service Information
+
+Open a web browser and navigate to `http://localhost:8082` to see:
+- Service status and version
+- Available API endpoints
+- API documentation
+- Security information
 
 ### Test the Service
 
 - **From Start Menu**: ArhintSigner Web Service → Open Example Page
-- **Or manually**: Open `example-webservice.html` in any browser
+- **Or manually**: Open `example-arhint-signer.html` in any browser
 
 ### Stop the Service
 
@@ -106,7 +126,7 @@ console.log(signData.result); // Base64 signature
 
 **Solution**: Run the service with a custom port:
 ```bash
-arhint-signer-webservice.exe 9090
+arhint-signer.exe 9090
 ```
 
 Then update your JavaScript to use the new port:
@@ -143,7 +163,7 @@ For production use, consider:
 
 ## Support
 
-For detailed documentation, see: `README-webservice.md` in the installation folder
+For detailed documentation, see: `README.md` in the installation folder
 
 For issues or questions, refer to the main project repository.
 

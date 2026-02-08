@@ -20,8 +20,8 @@ RequestExecutionLevel admin
 
 ; Interface Settings
 !define MUI_ABORTWARNING
-!define MUI_ICON "icon\app-icon-48.ico"
-!define MUI_UNICON "icon\app-icon-48.ico"
+!define MUI_ICON "..\resources\icon\app-icon-48.ico"
+!define MUI_UNICON "..\resources\icon\app-icon-48.ico"
 
 ; Component page description
 !define MUI_COMPONENTSPAGE_TEXT_TOP "Choose installation options for ${APP_NAME}."
@@ -70,21 +70,21 @@ Section "Program Files" SecProgram
   SetOutPath "$INSTDIR"
   
   ; Copy main executable
-  File "arhint-signer-webservice.exe"
+  File "..\release\arhint-signer.exe"
   
   ; Copy icon files
-  File "icon\app-icon-16.ico"
-  File "icon\app-icon-32.ico"
-  File "icon\app-icon-48.ico"
-  File "icon\app-icon-64.ico"
-  File "icon\app-icon-128.ico"
-  File "icon\app-icon-256.ico"
+  File "..\resources\icon\app-icon-16.ico"
+  File "..\resources\icon\app-icon-32.ico"
+  File "..\resources\icon\app-icon-48.ico"
+  File "..\resources\icon\app-icon-64.ico"
+  File "..\resources\icon\app-icon-128.ico"
+  File "..\resources\icon\app-icon-256.ico"
   
   ; Copy example HTML file
-  File "example-webservice.html"
+  File "..\examples\example-arhint-signer.html"
   
   ; Copy README
-  File "README-webservice.md"
+  File "..\README.md"
   
   ; Write uninstaller
   WriteUninstaller "$INSTDIR\Uninstall.exe"
@@ -113,12 +113,18 @@ Section "Reserve HTTP URL" SecReserveURL
   Call ReserveURL
 SectionEnd
 
+Section "Auto-start on Windows Startup" SecAutoStart
+  ; Add registry entry to auto-start the service on Windows boot
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "${APP_SHORT_NAME}" "$INSTDIR\arhint-signer.exe"
+SectionEnd
+
 ;--------------------------------
 ; Section Descriptions
 
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
   !insertmacro MUI_DESCRIPTION_TEXT ${SecProgram} "Install the ${APP_NAME} executable and related files."
   !insertmacro MUI_DESCRIPTION_TEXT ${SecReserveURL} "Reserve HTTP URL to allow the service to run without administrator privileges."
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecAutoStart} "Automatically start the web service when Windows starts."
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 ;--------------------------------
@@ -129,10 +135,13 @@ Section "Uninstall"
   ; Remove HTTP URL reservation
   nsExec::ExecToLog 'netsh http delete urlacl url=http://+:${SERVICE_PORT}/'
   
+  ; Remove auto-start registry entry
+  DeleteRegValue HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "${APP_SHORT_NAME}"
+  
   ; Remove files
-  Delete "$INSTDIR\arhint-signer-webservice.exe"
-  Delete "$INSTDIR\example-webservice.html"
-  Delete "$INSTDIR\README-webservice.md"
+  Delete "$INSTDIR\arhint-signer.exe"
+  Delete "$INSTDIR\example-arhint-signer.html"
+  Delete "$INSTDIR\README.md"
   Delete "$INSTDIR\Uninstall.exe"
   
   ; Remove directories

@@ -5,14 +5,14 @@
  * from the Windows certificate store.
  * 
  * Architecture:
- * - include/http_server.h       : HTTP server initialization and request loop
- * - include/request_handler.h   : Request routing and endpoint handling
- * - include/certificate_manager.h : Certificate operations (list, sign)
- * - include/http_utils.h        : HTTP response utilities
- * - include/json_utils.h        : JSON serialization/parsing
- * - include/crypto_utils.h      : Base64 encoding/decoding
- * - include/string_utils.h      : String manipulation utilities
- * - include/system_tray.h       : System tray icon management
+ * - src/include/http_server.h       : HTTP server initialization and request loop
+ * - src/include/request_handler.h   : Request routing and endpoint handling
+ * - src/include/certificate_manager.h : Certificate operations (list, sign)
+ * - src/include/http_utils.h        : HTTP response utilities
+ * - src/include/json_utils.h        : JSON serialization/parsing
+ * - src/include/crypto_utils.h      : Base64 encoding/decoding
+ * - src/include/string_utils.h      : String manipulation utilities
+ * - src/include/system_tray.h       : System tray icon management
  */
 
 #define WIN32_LEAN_AND_MEAN
@@ -22,9 +22,9 @@
 #include <atomic>
 #include <thread>
 
-#include "include/http_server.h"
-#include "include/request_handler.h"
-#include "include/system_tray.h"
+#include "http_server.h"
+#include "request_handler.h"
+#include "system_tray.h"
 
 using namespace ArhintSigner;
 

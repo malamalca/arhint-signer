@@ -36,12 +36,12 @@ nid.hIcon = (HICON)LoadImageW(NULL, L"app-icon-32.ico", IMAGE_ICON,
 ```
 With fallback to default icon if file not found.
 
-#### NSIS Installer (installer-webservice.nsi)
+#### NSIS Installer (installer-arhint-signer.nsi)
 - Updated installer/uninstaller icon to `app-icon-48.ico`
 - Added all 6 icon files to installation package
 - Set registry DisplayIcon to `app-icon-48.ico`
 
-#### Makefile (Makefile-webservice)
+#### Makefile
 Added automatic icon generation:
 ```makefile
 make          # Builds icons + executable
@@ -74,8 +74,8 @@ Created:
 
 ### Modified Files
 - ✅ `include/system_tray.h` - Custom icon loading
-- ✅ `installer-webservice.nsi` - Icon integration
-- ✅ `Makefile-webservice` - Icon build automation
+- ✅ `installer/installer-arhint-signer.nsi` - Icon integration
+- ✅ `Makefile` - Icon build automation
 - ✅ `README-webservice.md` - Updated features
 
 ## Usage

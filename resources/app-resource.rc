@@ -34,7 +34,7 @@ BEGIN
             VALUE "FileVersion", "1.0.0.0"
             VALUE "InternalName", "arhint-signer-webservice"
             VALUE "LegalCopyright", "Copyright (C) 2025"
-            VALUE "OriginalFilename", "arhint-signer-webservice.exe"
+            VALUE "OriginalFilename", "arhint-signer.exe"
             VALUE "ProductName", "ArhintSigner Web Service"
             VALUE "ProductVersion", "1.0.0.0"
         END

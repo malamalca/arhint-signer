@@ -43,8 +43,9 @@ clean:
 	@if exist $(RESOURCE_OBJ) del /F $(RESOURCE_OBJ)
 	@if exist $(ICON_GEN) del /F $(ICON_GEN)
 	@if exist *.obj del /F *.obj
-	@if exist $(RELEASE_DIR) rmdir $(RELEASE_DIR)
-	@if exist icon\app-icon-*.ico del /F icon\app-icon-*.ico
+	@if exist src\*.obj del /F src\*.obj
+	@if exist resources\icon\*.obj del /F resources\icon\*.obj
+	@if exist resources\icon\app-icon-*.ico del /F resources\icon\app-icon-*.ico
 	@echo Clean complete.
 
 run: $(TARGET)

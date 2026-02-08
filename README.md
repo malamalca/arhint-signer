@@ -53,20 +53,27 @@ See the "Building" section below to compile from source.
 
 ## Building
 
-### Using Visual Studio Build Tools (Recommended)
+### Using Visual Studio Build Tools with nmake (Recommended)
 
 ```bash
-cmd /c ""C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat" && cl /EHsc /O2 /I\"src/include\" /Fe:arhint-signer.exe src/arhint-signer.cpp httpapi.lib crypt32.lib ncrypt.lib ws2_32.lib advapi32.lib"
+# Setup build environment and build
+cmd /c ""C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat" && nmake all"
 ```
 
-### Using Make
+Or compile manually:
+
+```bash
+cmd /c ""C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat" && cl /std:c++17 /EHsc /O2 /I\"src/include\" src/arhint-signer.cpp resources/app-resource.res /Fe:release/arhint-signer.exe /link /SUBSYSTEM:WINDOWS /ENTRY:WinMainCRTStartup httpapi.lib crypt32.lib ncrypt.lib ws2_32.lib advapi32.lib shell32.lib user32.lib"
+```
+
+### Using nmake (Make)
 
 ```bash
 # Build the executable (outputs to release/ folder)
-make
+nmake all
 
 # Or build and run
-make run
+nmake run
 ```
 
 The executable will be created at `release\arhint-signer.exe`
@@ -101,7 +108,7 @@ This creates `ArhintSigner-Setup.exe` ready for distribution.
 The first time you run the service, you need to reserve the HTTP URL. Run as **Administrator**:
 
 ```bash
-netsh http add urlacl url=http://+:8080/ user=Everyone
+netsh http add urlacl url=http://+:8082/ user=Everyone
 ```
 
 This only needs to be done once. It allows non-admin users to run the service on port 8082.

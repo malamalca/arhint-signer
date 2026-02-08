@@ -23,7 +23,12 @@ This design visually represents the application's purpose: certificate-based dig
 
 ### Method 1: Using the C++ Generator (Recommended)
 ```cmd
-cl /EHsc /O2 create-icon.cpp /link gdi32.lib user32.lib
+# From root directory
+nmake icons
+
+# Or manually compile and run
+cl /std:c++17 /EHsc /O2 resources\icon\create-icon.cpp /Feresources\icon\create-icon.exe /link gdi32.lib user32.lib
+cd resources\icon
 create-icon.exe
 ```
 
@@ -38,6 +43,8 @@ Requires Inkscape or ImageMagick installed.
 
 ## Usage
 
-The application uses `app-icon-32.ico` for the system tray icon. The installer uses `app-icon-48.ico` for its icon display.
+The application uses `app-icon-32.ico` embedded as a resource in the executable for the system tray icon. The icon is compiled into the executable via `resources/app-resource.rc`.
+
+The installer uses `app-icon-48.ico` for its icon display.
 
 All icon files are included in the installer and deployed to the installation directory.

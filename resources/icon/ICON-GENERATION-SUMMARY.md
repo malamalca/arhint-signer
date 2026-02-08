@@ -28,39 +28,54 @@ Successfully created:
 
 ### 4. Integration with Application
 
-#### System Tray (system_tray.h)
-Updated to load custom icon:
+#### System Tray (src/include/system_tray.h)
+Updated to load icon from embedded resources:
 ```cpp
-nid.hIcon = (HICON)LoadImageW(NULL, L"app-icon-32.ico", IMAGE_ICON, 
-                              0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE | LR_SHARED);
-```
-With fallback to default icon if file not found.
+// Application icon resource ID (must match app-resource.rc)
+#define IDI_APPLICATION_ICON 101
 
-#### NSIS Installer (installer-arhint-signer.nsi)
-- Updated installer/uninstaller icon to `app-icon-48.ico`
+// Load icon from executable resources
+HINSTANCE hInstance = GetModuleHandle(NULL);
+nid.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APPLICATION_ICON));
+if (!nid.hIcon) {
+    // Fallback to default icon if resource icon not found
+    nid.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+}
+```
+
+#### Resource File (resources/app-resource.rc)
+Icon is embedded into the executable:
+```rc
+#define IDI_APPLICATION_ICON 101
+IDI_APPLICATION_ICON    ICON    "icon\\app-icon-32.ico"
+```
+
+#### NSIS Installer (installer/installer-arhint-signer.nsi)
+- Updated installer/uninstaller icon to `resources/icon/app-icon-48.ico`
 - Added all 6 icon files to installation package
 - Set registry DisplayIcon to `app-icon-48.ico`
 
 #### Makefile
 Added automatic icon generation:
 ```makefile
-make          # Builds icons + executable
-make icons    # Generates icons only
-make clean    # Removes all built files including icons
+nmake all     # Builds icons + executable
+nmake icons   # Generates icons only  
+nmake clean   # Removes all built files including icons
 ```
 
 ### 5. Build Process
 All files compiled successfully:
 1. ✅ `create-icon.exe` compiled with gdi32.lib and user32.lib
-2. ✅ All 6 ICO files generated
-3. ✅ `arhint-signer-webservice.exe` rebuilt with custom icon support
+2. ✅ All 6 ICO files generated in `resources/icon/`
+3. ✅ Icon embedded into `release/arhint-signer.exe` via resource compiler
+4. ✅ `arhint-signer.exe` built with custom icon support
 
 ### 6. Documentation
 Created:
 - `ICON-README.md` - Comprehensive icon documentation
 - `icon-source.svg` - SVG source (alternative design approach)
 - `generate-icon.ps1` - PowerShell alternative (requires Inkscape/ImageMagick)
-- Updated `README-webservice.md` - Added icon to features list
+- Updated `README.md` - Added icon to features list
 
 ## Files Created/Modified
 
@@ -73,15 +88,16 @@ Created:
 - ✅ `ICON-README.md` - Icon documentation
 
 ### Modified Files
-- ✅ `include/system_tray.h` - Custom icon loading
+- ✅ `src/include/system_tray.h` - Embedded resource icon loading
+- ✅ `resources/app-resource.rc` - Icon resource definition
 - ✅ `installer/installer-arhint-signer.nsi` - Icon integration
 - ✅ `Makefile` - Icon build automation
-- ✅ `README-webservice.md` - Updated features
+- ✅ `README.md` - Updated features
 
 ## Usage
 
 ### Running the Application
-When you run `arhint-signer-webservice.exe`, the system tray icon will now display the custom certificate/key icon instead of the default Windows application icon.
+When you run `release\arhint-signer.exe`, the system tray icon will now display the custom certificate/key icon loaded from the embedded resource instead of the default Windows application icon.
 
 ### Right-click System Tray Icon
 - **Show Console** - Make console window visible
@@ -124,4 +140,4 @@ Each ICO file contains:
 
 No further action required! The icon system is fully integrated and will be included automatically in all builds and installations.
 
-If you want to modify the icon design, edit `create-icon.cpp` (specifically the `DrawCertificateIcon()` function) and run `make icons` to regenerate.
+If you want to modify the icon design, edit `resources/icon/create-icon.cpp` (specifically the `DrawCertificateIcon()` function) and run `nmake icons` to regenerate.

@@ -14,6 +14,9 @@ constexpr UINT ID_TRAY_EXIT = 2001;
 constexpr UINT ID_TRAY_SHOW = 2002;
 constexpr UINT ID_TRAY_HIDE = 2003;
 
+// Application icon resource ID (must match app-resource.rc)
+#define IDI_APPLICATION_ICON 101
+
 /**
  * System Tray Icon Manager
  */
@@ -216,11 +219,11 @@ public:
         nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
         nid.uCallbackMessage = WM_TRAYICON;
         
-        // Load custom icon from file
-        nid.hIcon = (HICON)LoadImageW(NULL, L"icon\\app-icon-32.ico", IMAGE_ICON, 
-                                      0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE | LR_SHARED);
+        // Load icon from executable resources
+        HINSTANCE hInstance = GetModuleHandle(NULL);
+        nid.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APPLICATION_ICON));
         if (!nid.hIcon) {
-            // Fallback to default icon if custom icon not found
+            // Fallback to default icon if resource icon not found
             nid.hIcon = LoadIcon(NULL, IDI_APPLICATION);
         }
         

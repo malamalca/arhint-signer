@@ -36,6 +36,31 @@ inline void handleRequest(HANDLE hReqQueue, PHTTP_REQUEST pRequest) {
             path = path.substr(0, queryPos);
         }
 
+        // Handle /health endpoint (for health checks)
+        if (path == "/health" && pRequest->Verb == HttpVerbGET) {
+            Json::Builder response;
+            response.addString("status", "ok");
+            response.addString("service", "ArhintSigner");
+            Http::sendResponse(hReqQueue, pRequest->RequestId, 200, "application/json", response.toString());
+            return;
+        }
+
+        // Handle /certificates endpoint (modern API)
+        if (path == "/certificates" && pRequest->Verb == HttpVerbGET) {
+            std::cout << "Listing certificates..." << std::endl;
+            std::string certs = Certificate::listCertificates();
+            std::cout << "Found certificates, sending response..." << std::endl;
+            
+            Json::Builder response;
+            response.addArray("certificates", certs);
+            std::string responseStr = response.toString();
+            
+            std::cout << "Response size: " << responseStr.length() << " bytes" << std::endl;
+            Http::sendResponse(hReqQueue, pRequest->RequestId, 200, "application/json", responseStr);
+            std::cout << "Response sent successfully" << std::endl;
+            return;
+        }
+
         // Handle root path - display service info page
         if (path == "/" && pRequest->Verb == HttpVerbGET) {
             std::string homePage = R"(<!DOCTYPE html>

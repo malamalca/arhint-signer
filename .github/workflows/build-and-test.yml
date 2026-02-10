@@ -199,6 +199,24 @@ jobs:
             if ($signResponse.StatusCode -eq 200 -and $signJson.result) {
               echo "✅ Sign endpoint working - received signature"
               echo "Signature length: $($signJson.result.Length) characters"
+              
+              # Validate the signature
+              echo "Validating signature..."
+              $signatureBase64 = $signJson.result
+              $signatureBytes = [Convert]::FromBase64String($signatureBase64)
+              
+              # Get the public key from the certificate
+              $publicKey = $cert.PublicKey.Key
+              
+              # Verify the signature
+              $isValid = $publicKey.VerifyHash($hashBytes, [System.Security.Cryptography.CryptoConfig]::MapNameToOID("SHA256"), $signatureBytes)
+              
+              if ($isValid) {
+                echo "✅ Signature validation passed - signature is cryptographically valid"
+              } else {
+                echo "❌ Signature validation failed - signature is invalid"
+                exit 1
+              }
             } else {
               echo "❌ Sign endpoint failed"
               echo "Response: $($signResponse.Content)"

@@ -208,8 +208,8 @@ jobs:
               # Get the public key from the certificate
               $publicKey = $cert.PublicKey.Key
               
-              # Verify the signature
-              $isValid = $publicKey.VerifyHash($hashBytes, [System.Security.Cryptography.CryptoConfig]::MapNameToOID("SHA256"), $signatureBytes)
+              # Verify the signature using RSA
+              $isValid = $publicKey.VerifyHash($hashBytes, "SHA256", $signatureBytes)
               
               if ($isValid) {
                 echo "✅ Signature validation passed - signature is cryptographically valid"

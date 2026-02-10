@@ -138,13 +138,15 @@ jobs:
           echo "=== Testing listCerts endpoint ==="
           $response = Invoke-WebRequest -Uri "http://localhost:8082/listCerts" -Method GET -UseBasicParsing
           echo "Status Code: $($response.StatusCode)"
+          echo "Response: $($response.Content)"
           $json = $response.Content | ConvertFrom-Json
           
-          if ($response.StatusCode -eq 200 -and $json.result) {
+          if ($response.StatusCode -eq 200 -and $null -ne $json.result) {
             echo "✅ ListCerts endpoint working"
             echo "Found $($json.result.Count) certificates"
           } else {
             echo "❌ ListCerts endpoint failed"
+            echo "Response was: $($response.Content)"
             exit 1
           }
           

@@ -75,11 +75,14 @@ jobs:
       run: |
         echo "Starting ArhintSigner web service (test mode)..."
         
-        # Start the test service (console version)
-        $process = Start-Process -FilePath "release\arhint-signer-test.exe" -ArgumentList "8082" -PassThru -NoNewWindow
+        # Start the test service as a background job
+        $job = Start-Job -ScriptBlock {
+          param($exePath, $port)
+          & $exePath $port
+        } -ArgumentList (Resolve-Path "release\arhint-signer-test.exe").Path, "8082"
         
-        echo "SERVICE_PID=$($process.Id)" >> $env:GITHUB_OUTPUT
-        echo "✅ Service started with PID: $($process.Id)"
+        echo "SERVICE_JOB_ID=$($job.Id)" >> $env:GITHUB_OUTPUT
+        echo "✅ Service started as job ID: $($job.Id)"
         
         # Wait for service to be ready
         echo "Waiting for service to initialize..."
@@ -91,10 +94,11 @@ jobs:
           Start-Sleep -Seconds 1
           $attempt++
           
-          # Check if process is still running
-          $proc = Get-Process -Id $process.Id -ErrorAction SilentlyContinue
-          if (-not $proc) {
-            echo "❌ Service process exited unexpectedly"
+          # Check if job is still running
+          $jobState = (Get-Job -Id $job.Id).State
+          if ($jobState -ne "Running") {
+            echo "❌ Service job exited unexpectedly with state: $jobState"
+            Receive-Job -Id $job.Id
             exit 1
           }
           
@@ -114,6 +118,8 @@ jobs:
         
         if (-not $serviceReady) {
           echo "❌ Service failed to respond within $maxAttempts seconds"
+          echo "Job output:"
+          Receive-Job -Id $job.Id
           exit 1
         }
         
@@ -136,22 +142,22 @@ jobs:
           exit 1
         }
         
-    - name: Test certificates endpoint
+    - name: Test listCerts endpoint
       run: |
-        echo "Testing certificates endpoint..."
+        echo "Testing listCerts endpoint..."
         try {
-          $response = Invoke-WebRequest -Uri "http://localhost:8082/certificates" -Method GET -UseBasicParsing
+          $response = Invoke-WebRequest -Uri "http://localhost:8082/listCerts" -Method GET -UseBasicParsing
           echo "Status Code: $($response.StatusCode)"
           $json = $response.Content | ConvertFrom-Json
           
-          if ($response.StatusCode -eq 200 -and $json.certificates) {
-            echo "✅ Certificates endpoint working"
-            echo "Found $($json.certificates.Count) certificates"
+          if ($response.StatusCode -eq 200 -and $json.result) {
+            echo "✅ ListCerts endpoint working"
+            echo "Found $($json.result.Count) certificates"
           } else {
-            echo "⚠️ Certificates endpoint returned unexpected response"
+            echo "⚠️ ListCerts endpoint returned unexpected response"
           }
         } catch {
-          echo "❌ Certificates endpoint test failed: $_"
+          echo "❌ ListCerts endpoint test failed: $_"
           exit 1
         }
         
@@ -205,10 +211,11 @@ jobs:
       if: always()
       run: |
         echo "Stopping web service..."
-        $servicePid = "${{ steps.start_service.outputs.SERVICE_PID }}"
-        if ($servicePid) {
+        $jobId = "${{ steps.start_service.outputs.SERVICE_JOB_ID }}"
+        if ($jobId) {
           try {
-            Stop-Process -Id $servicePid -Force -ErrorAction SilentlyContinue
+            Stop-Job -Id $jobId -ErrorAction SilentlyContinue
+            Remove-Job -Id $jobId -Force -ErrorAction SilentlyContinue
             echo "✅ Service stopped"
           } catch {
             echo "⚠️ Service may have already stopped"

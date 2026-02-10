@@ -45,22 +45,6 @@ inline void handleRequest(HANDLE hReqQueue, PHTTP_REQUEST pRequest) {
             return;
         }
 
-        // Handle /certificates endpoint (modern API)
-        if (path == "/certificates" && pRequest->Verb == HttpVerbGET) {
-            std::cout << "Listing certificates..." << std::endl;
-            std::string certs = Certificate::listCertificates();
-            std::cout << "Found certificates, sending response..." << std::endl;
-            
-            Json::Builder response;
-            response.addArray("certificates", certs);
-            std::string responseStr = response.toString();
-            
-            std::cout << "Response size: " << responseStr.length() << " bytes" << std::endl;
-            Http::sendResponse(hReqQueue, pRequest->RequestId, 200, "application/json", responseStr);
-            std::cout << "Response sent successfully" << std::endl;
-            return;
-        }
-
         // Handle root path - display service info page
         if (path == "/" && pRequest->Verb == HttpVerbGET) {
             std::string homePage = R"(<!DOCTYPE html>

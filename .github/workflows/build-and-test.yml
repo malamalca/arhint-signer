@@ -70,13 +70,6 @@ jobs:
       run: |
         echo "Starting ArhintSigner web service..."
         
-        # Check if port 8082 is already in use
-        $portInUse = Get-NetTCPConnection -LocalPort 8082 -ErrorAction SilentlyContinue
-        if ($portInUse) {
-          echo "⚠️ Port 8082 is already in use"
-          Get-NetTCPConnection -LocalPort 8082 | Format-Table
-        }
-        
         # Start the service with a console window to capture output
         $psi = New-Object System.Diagnostics.ProcessStartInfo
         $psi.FileName = "release\arhint-signer.exe"
@@ -134,20 +127,43 @@ jobs:
           
           # Check if port is listening
           $listening = Get-NetTCPConnection -LocalPort 8082 -State Listen -ErrorAction SilentlyContinue
-          if ($listening) {
+          if ($listening -and $attempt -eq 1) {
             echo "✅ Port 8082 is now listening"
           }
           
-          try {
-            $response = Invoke-WebRequest -Uri "http://localhost:8082/health" -Method GET -UseBasicParsing -TimeoutSec 2 -ErrorAction SilentlyContinue
-            if ($response.StatusCode -eq 200) {
-              $serviceReady = $true
-              echo "✅ Service is ready after $attempt seconds"
+          # Try multiple methods to connect
+          $urls = @("http://localhost:8082/health", "http://127.0.0.1:8082/health")
+          foreach ($url in $urls) {
+            try {
+              # Try with curl first (more reliable on Windows)
+              $curlResult = curl.exe -s -w "%{http_code}" -o nul $url 2>&1
+              if ($curlResult -eq "200") {
+                $serviceReady = $true
+                echo "✅ Service is ready after $attempt seconds (tested with curl on $url)"
+                break
+              }
+            } catch {
+              # Try Invoke-WebRequest as fallback
+              try {
+                $response = Invoke-WebRequest -Uri $url -Method GET -UseBasicParsing -TimeoutSec 2 -ErrorAction SilentlyContinue
+                if ($response.StatusCode -eq 200) {
+                  $serviceReady = $true
+                  echo "✅ Service is ready after $attempt seconds (tested with Invoke-WebRequest on $url)"
+                  break
+                }
+              } catch {
+                # Continue to next URL
+              }
             }
-          } catch {
-            if ($attempt % 5 -eq 0) {
-              echo "Attempt $attempt/$maxAttempts - Still waiting..."
-            }
+          }
+          
+          if ($serviceReady) {
+            break
+          }
+          
+          if ($attempt % 5 -eq 0) {
+            echo "Attempt $attempt/$maxAttempts - Still waiting..."
+            echo "Output so far: $($outputBuilder.ToString())"
           }
         }
         
@@ -159,9 +175,13 @@ jobs:
           echo "=== Standard Error ==="
           echo $errorBuilder.ToString()
           
-          # Check listening ports
-          echo "=== Listening Ports ==="
-          Get-NetTCPConnection -State Listen | Where-Object { $_.LocalPort -eq 8082 } | Format-Table
+          # Check HTTP.sys URL reservations
+          echo "=== HTTP.sys URL Reservations ==="
+          netsh http show urlacl | Select-String -Pattern "8082" -Context 2,2
+          
+          # Try one more time with detailed curl output
+          echo "=== Final connection test with curl ==="
+          curl.exe -v http://localhost:8082/health 2>&1
           
           Unregister-Event -SourceIdentifier $outputEvent.Name
           Unregister-Event -SourceIdentifier $errorEvent.Name

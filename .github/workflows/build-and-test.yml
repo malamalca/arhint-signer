@@ -75,14 +75,20 @@ jobs:
       run: |
         echo "Starting ArhintSigner web service (test mode)..."
         
-        # Start the test service as a background job
-        $job = Start-Job -ScriptBlock {
-          param($exePath, $port)
-          & $exePath $port
-        } -ArgumentList (Resolve-Path "release\arhint-signer-test.exe").Path, "8082"
+        # Start the service in background using Start-Process
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = (Resolve-Path "release\arhint-signer-test.exe").Path
+        $psi.Arguments = "8082"
+        $psi.UseShellExecute = $false
+        $psi.CreateNoWindow = $true
+        $psi.RedirectStandardOutput = $false
+        $psi.RedirectStandardError = $false
         
-        echo "SERVICE_JOB_ID=$($job.Id)" >> $env:GITHUB_OUTPUT
-        echo "✅ Service started as job ID: $($job.Id)"
+        $process = [System.Diagnostics.Process]::Start($psi)
+        $process.Id | Out-File -FilePath "service.pid"
+        
+        echo "SERVICE_PID=$($process.Id)" >> $env:GITHUB_OUTPUT
+        echo "✅ Service started with PID: $($process.Id)"
         
         # Wait for service to be ready
         echo "Waiting for service to initialize..."
@@ -94,11 +100,10 @@ jobs:
           Start-Sleep -Seconds 1
           $attempt++
           
-          # Check if job is still running
-          $jobState = (Get-Job -Id $job.Id).State
-          if ($jobState -ne "Running") {
-            echo "❌ Service job exited unexpectedly with state: $jobState"
-            Receive-Job -Id $job.Id
+          # Check if process is still running
+          $proc = Get-Process -Id $process.Id -ErrorAction SilentlyContinue
+          if (-not $proc) {
+            echo "❌ Service process exited unexpectedly"
             exit 1
           }
           
@@ -118,8 +123,7 @@ jobs:
         
         if (-not $serviceReady) {
           echo "❌ Service failed to respond within $maxAttempts seconds"
-          echo "Job output:"
-          Receive-Job -Id $job.Id
+          Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
           exit 1
         }
         
@@ -211,15 +215,21 @@ jobs:
       if: always()
       run: |
         echo "Stopping web service..."
-        $jobId = "${{ steps.start_service.outputs.SERVICE_JOB_ID }}"
-        if ($jobId) {
-          try {
-            Stop-Job -Id $jobId -ErrorAction SilentlyContinue
-            Remove-Job -Id $jobId -Force -ErrorAction SilentlyContinue
-            echo "✅ Service stopped"
-          } catch {
-            echo "⚠️ Service may have already stopped"
+        if (Test-Path "service.pid") {
+          $servicePid = Get-Content "service.pid"
+          if ($servicePid) {
+            try {
+              Stop-Process -Id $servicePid -Force -ErrorAction SilentlyContinue
+              echo "✅ Service stopped (PID: $servicePid)"
+            } catch {
+              echo "⚠️ Service may have already stopped"
+            }
           }
+          Remove-Item "service.pid" -Force -ErrorAction SilentlyContinue
+        } else {
+          # Fallback to killing by name
+          Get-Process | Where-Object { $_.ProcessName -eq "arhint-signer-test" } | Stop-Process -Force -ErrorAction SilentlyContinue
+          echo "✅ Cleanup complete"
         }
         
     - name: Upload build artifacts

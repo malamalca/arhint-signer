@@ -24,16 +24,54 @@
 
 #include "http_server.h"
 #include "request_handler.h"
+#ifndef CI_TEST_MODE
 #include "system_tray.h"
+#endif
 
 using namespace ArhintSigner;
 
 // Global flag for clean shutdown
 std::atomic<bool> g_running(true);
 
+#ifndef CI_TEST_MODE
 // Forward declare tray icon pointer
 SystemTray::TrayIcon* g_trayIcon = nullptr;
+#endif
 
+#ifdef CI_TEST_MODE
+// Console mode entry point for CI testing
+int main(int argc, char* argv[]) {
+    // Parse port from command line (default: 8082)
+    int port = 8082;
+    if (argc > 1) {
+        port = atoi(argv[1]);
+        if (port <= 0 || port > 65535) {
+            port = 8082;
+        }
+    }
+
+    std::cout << "ArhintSigner Web Service (Test Mode)" << std::endl;
+    std::cout << "Starting on port " << port << "..." << std::endl;
+
+    // Create and initialize server
+    Server::HttpServer server(port);
+    
+    if (!server.initialize()) {
+        std::cerr << "Failed to initialize HTTP server on port " << port << std::endl;
+        std::cerr << "Make sure the URL is reserved:" << std::endl;
+        std::cerr << "netsh http add urlacl url=http://+:" << port << "/ user=Everyone" << std::endl;
+        return 1;
+    }
+
+    std::cout << "Server initialized successfully" << std::endl;
+    std::cout << "Processing requests... (Press Ctrl+C to stop)" << std::endl;
+
+    // Process requests directly in main thread
+    server.processRequests(RequestHandler::handleRequest);
+    
+    return 0;
+}
+#else
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     UNREFERENCED_PARAMETER(hInstance);
     UNREFERENCED_PARAMETER(hPrevInstance);
@@ -107,3 +145,4 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     
     return 0;
 }
+#endif // CI_TEST_MODE

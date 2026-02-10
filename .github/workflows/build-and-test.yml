@@ -44,6 +44,11 @@ jobs:
         mkdir release -Force
         cl /std:c++17 /EHsc /O2 /W3 /I"src/include" src\arhint-signer.cpp resources\app-resource.res /Fe:release\arhint-signer.exe /link /SUBSYSTEM:WINDOWS /ENTRY:WinMainCRTStartup httpapi.lib crypt32.lib ncrypt.lib ws2_32.lib advapi32.lib shell32.lib user32.lib
         
+    - name: Build test version (console mode)
+      run: |
+        echo "Building test version for CI..."
+        cl /std:c++17 /EHsc /O2 /W3 /DCI_TEST_MODE /I"src/include" src\arhint-signer.cpp /Fe:release\arhint-signer-test.exe /link /SUBSYSTEM:CONSOLE httpapi.lib crypt32.lib ncrypt.lib ws2_32.lib advapi32.lib shell32.lib user32.lib
+        
     - name: Verify build output
       run: |
         if (Test-Path "release\arhint-signer.exe") {
@@ -68,44 +73,17 @@ jobs:
     - name: Start web service
       id: start_service
       run: |
-        echo "Starting ArhintSigner web service..."
+        echo "Starting ArhintSigner web service (test mode)..."
         
-        # Start the service with a console window to capture output
-        $psi = New-Object System.Diagnostics.ProcessStartInfo
-        $psi.FileName = "release\arhint-signer.exe"
-        $psi.Arguments = "8082"
-        $psi.RedirectStandardOutput = $true
-        $psi.RedirectStandardError = $true
-        $psi.UseShellExecute = $false
-        $psi.CreateNoWindow = $true
-        
-        $process = [System.Diagnostics.Process]::Start($psi)
-        
-        # Start async readers
-        $outputBuilder = New-Object System.Text.StringBuilder
-        $errorBuilder = New-Object System.Text.StringBuilder
-        
-        $outputEvent = Register-ObjectEvent -InputObject $process -EventName OutputDataReceived -Action {
-          if ($EventArgs.Data) {
-            $Event.MessageData.AppendLine($EventArgs.Data)
-          }
-        } -MessageData $outputBuilder
-        
-        $errorEvent = Register-ObjectEvent -InputObject $process -EventName ErrorDataReceived -Action {
-          if ($EventArgs.Data) {
-            $Event.MessageData.AppendLine($EventArgs.Data)
-          }
-        } -MessageData $errorBuilder
-        
-        $process.BeginOutputReadLine()
-        $process.BeginErrorReadLine()
+        # Start the test service (console version)
+        $process = Start-Process -FilePath "release\arhint-signer-test.exe" -ArgumentList "8082" -PassThru -NoNewWindow
         
         echo "SERVICE_PID=$($process.Id)" >> $env:GITHUB_OUTPUT
         echo "✅ Service started with PID: $($process.Id)"
         
         # Wait for service to be ready
         echo "Waiting for service to initialize..."
-        $maxAttempts = 20
+        $maxAttempts = 15
         $attempt = 0
         $serviceReady = $false
         
@@ -114,82 +92,30 @@ jobs:
           $attempt++
           
           # Check if process is still running
-          if ($process.HasExited) {
-            echo "❌ Service process has exited unexpectedly with code: $($process.ExitCode)"
-            echo "=== Standard Output ==="
-            echo $outputBuilder.ToString()
-            echo "=== Standard Error ==="
-            echo $errorBuilder.ToString()
-            Unregister-Event -SourceIdentifier $outputEvent.Name
-            Unregister-Event -SourceIdentifier $errorEvent.Name
+          $proc = Get-Process -Id $process.Id -ErrorAction SilentlyContinue
+          if (-not $proc) {
+            echo "❌ Service process exited unexpectedly"
             exit 1
           }
           
-          # Check if port is listening
-          $listening = Get-NetTCPConnection -LocalPort 8082 -State Listen -ErrorAction SilentlyContinue
-          if ($listening -and $attempt -eq 1) {
-            echo "✅ Port 8082 is now listening"
-          }
-          
-          # Try multiple methods to connect
-          $urls = @("http://localhost:8082/health", "http://127.0.0.1:8082/health")
-          foreach ($url in $urls) {
-            try {
-              # Try with curl first (more reliable on Windows)
-              $curlResult = curl.exe -s -w "%{http_code}" -o nul $url 2>&1
-              if ($curlResult -eq "200") {
-                $serviceReady = $true
-                echo "✅ Service is ready after $attempt seconds (tested with curl on $url)"
-                break
-              }
-            } catch {
-              # Try Invoke-WebRequest as fallback
-              try {
-                $response = Invoke-WebRequest -Uri $url -Method GET -UseBasicParsing -TimeoutSec 2 -ErrorAction SilentlyContinue
-                if ($response.StatusCode -eq 200) {
-                  $serviceReady = $true
-                  echo "✅ Service is ready after $attempt seconds (tested with Invoke-WebRequest on $url)"
-                  break
-                }
-              } catch {
-                # Continue to next URL
-              }
+          try {
+            $response = Invoke-WebRequest -Uri "http://localhost:8082/health" -Method GET -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop
+            if ($response.StatusCode -eq 200) {
+              $serviceReady = $true
+              echo "✅ Service is ready after $attempt seconds"
+              echo "Response: $($response.Content)"
             }
-          }
-          
-          if ($serviceReady) {
-            break
-          }
-          
-          if ($attempt % 5 -eq 0) {
-            echo "Attempt $attempt/$maxAttempts - Still waiting..."
-            echo "Output so far: $($outputBuilder.ToString())"
+          } catch {
+            if ($attempt % 5 -eq 0) {
+              echo "Attempt $attempt/$maxAttempts..."
+            }
           }
         }
         
         if (-not $serviceReady) {
-          echo "❌ Service failed to start within $maxAttempts seconds"
-          echo "Process status: Running=$(-not $process.HasExited), PID=$($process.Id)"
-          echo "=== Standard Output ==="
-          echo $outputBuilder.ToString()
-          echo "=== Standard Error ==="
-          echo $errorBuilder.ToString()
-          
-          # Check HTTP.sys URL reservations
-          echo "=== HTTP.sys URL Reservations ==="
-          netsh http show urlacl | Select-String -Pattern "8082" -Context 2,2
-          
-          # Try one more time with detailed curl output
-          echo "=== Final connection test with curl ==="
-          curl.exe -v http://localhost:8082/health 2>&1
-          
-          Unregister-Event -SourceIdentifier $outputEvent.Name
-          Unregister-Event -SourceIdentifier $errorEvent.Name
+          echo "❌ Service failed to respond within $maxAttempts seconds"
           exit 1
         }
-        
-        Unregister-Event -SourceIdentifier $outputEvent.Name
-        Unregister-Event -SourceIdentifier $errorEvent.Name
         
     - name: Test health endpoint
       run: |

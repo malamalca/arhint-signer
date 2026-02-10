@@ -5,17 +5,21 @@ CXX = cl
 RC = rc
 CXXFLAGS = /std:c++17 /EHsc /O2 /W3 /I"src/include"
 LDFLAGS = /SUBSYSTEM:WINDOWS /ENTRY:WinMainCRTStartup httpapi.lib crypt32.lib ncrypt.lib ws2_32.lib advapi32.lib shell32.lib user32.lib
+LDFLAGS_CONSOLE = /SUBSYSTEM:CONSOLE httpapi.lib crypt32.lib ncrypt.lib ws2_32.lib advapi32.lib shell32.lib user32.lib
 RELEASE_DIR = release
 TARGET = $(RELEASE_DIR)\arhint-signer.exe
+TARGET_TEST = $(RELEASE_DIR)\arhint-signer-test.exe
 SOURCE = src\arhint-signer.cpp
 RESOURCE = resources\app-resource.rc
 RESOURCE_OBJ = resources\app-resource.res
 ICON_GEN = resources\icon\create-icon.exe
 ICON_SOURCE = resources\icon\create-icon.cpp
 
-.PHONY: all clean run icons
+.PHONY: all clean run icons test
 
 all: icons $(TARGET)
+
+test: icons $(TARGET_TEST)
 
 icons: $(ICON_GEN)
 	@echo Generating icon files...
@@ -37,9 +41,16 @@ $(TARGET): $(SOURCE) $(RESOURCE_OBJ)
 	$(CXX) $(CXXFLAGS) $(SOURCE) $(RESOURCE_OBJ) /Fe$(TARGET) /link $(LDFLAGS)
 	@echo Build complete: $(TARGET)
 
+$(TARGET_TEST): $(SOURCE)
+	@if not exist $(RELEASE_DIR) mkdir $(RELEASE_DIR)
+	@echo Building ArhintSigner Web Service (Console Test Mode)...
+	$(CXX) $(CXXFLAGS) /DCI_TEST_MODE $(SOURCE) /Fe$(TARGET_TEST) /link $(LDFLAGS_CONSOLE)
+	@echo Test build complete: $(TARGET_TEST)
+
 clean:
 	@echo Cleaning...
 	@if exist $(TARGET) del /F $(TARGET)
+	@if exist $(TARGET_TEST) del /F $(TARGET_TEST)
 	@if exist $(RESOURCE_OBJ) del /F $(RESOURCE_OBJ)
 	@if exist $(ICON_GEN) del /F $(ICON_GEN)
 	@if exist *.obj del /F *.obj

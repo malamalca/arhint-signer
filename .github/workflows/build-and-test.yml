@@ -205,11 +205,13 @@ jobs:
               $signatureBase64 = $signJson.result
               $signatureBytes = [Convert]::FromBase64String($signatureBase64)
               
-              # Get the public key from the certificate
-              $publicKey = $cert.PublicKey.Key
+              # Create RSACryptoServiceProvider for verification
+              $rsa = [System.Security.Cryptography.RSACryptoServiceProvider]::new()
+              $rsa.ImportParameters($cert.PublicKey.Key.ExportParameters($false))
               
-              # Verify the signature using RSA
-              $isValid = $publicKey.VerifyHash($hashBytes, "SHA256", $signatureBytes)
+              # Verify the signature
+              $sha256Oid = [System.Security.Cryptography.CryptoConfig]::MapNameToOID("SHA256")
+              $isValid = $rsa.VerifyHash($hashBytes, $sha256Oid, $signatureBytes)
               
               if ($isValid) {
                 echo "✅ Signature validation passed - signature is cryptographically valid"
@@ -217,6 +219,8 @@ jobs:
                 echo "❌ Signature validation failed - signature is invalid"
                 exit 1
               }
+              
+              $rsa.Dispose()
             } else {
               echo "❌ Sign endpoint failed"
               echo "Response: $($signResponse.Content)"

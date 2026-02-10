@@ -36,15 +36,6 @@ inline void handleRequest(HANDLE hReqQueue, PHTTP_REQUEST pRequest) {
             path = path.substr(0, queryPos);
         }
 
-        // Handle /health endpoint (for health checks)
-        if (path == "/health" && pRequest->Verb == HttpVerbGET) {
-            Json::Builder response;
-            response.addString("status", "ok");
-            response.addString("service", "ArhintSigner");
-            Http::sendResponse(hReqQueue, pRequest->RequestId, 200, "application/json", response.toString());
-            return;
-        }
-
         // Handle root path - display service info page
         if (path == "/" && pRequest->Verb == HttpVerbGET) {
             std::string homePage = R"(<!DOCTYPE html>

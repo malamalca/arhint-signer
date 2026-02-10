@@ -1,5 +1,7 @@
 # ArhintSigner Web Service
 
+![Build and Test](https://github.com/malamalca/arhint-signer/actions/workflows/build-and-test.yml/badge.svg)
+
 A C++ HTTP server implementation that provides digital signature services using Windows Certificate Store.
 
 ## Overview

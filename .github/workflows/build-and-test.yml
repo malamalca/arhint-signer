@@ -2,9 +2,7 @@ name: Build and Test
 
 on:
   push:
-    branches: [ main, develop ]
   pull_request:
-    branches: [ main, develop ]
   workflow_dispatch:
 
 jobs:
@@ -76,7 +74,31 @@ jobs:
         $process = Start-Process -FilePath "release\arhint-signer.exe" -ArgumentList "8082" -PassThru -WindowStyle Hidden
         echo "SERVICE_PID=$($process.Id)" >> $env:GITHUB_OUTPUT
         echo "✅ Service started with PID: $($process.Id)"
-        Start-Sleep -Seconds 3
+        
+        # Wait for service to be ready
+        echo "Waiting for service to initialize..."
+        $maxAttempts = 20
+        $attempt = 0
+        $serviceReady = $false
+        
+        while ($attempt -lt $maxAttempts -and -not $serviceReady) {
+          Start-Sleep -Seconds 1
+          $attempt++
+          try {
+            $response = Invoke-WebRequest -Uri "http://localhost:8082/health" -Method GET -UseBasicParsing -TimeoutSec 2 -ErrorAction SilentlyContinue
+            if ($response.StatusCode -eq 200) {
+              $serviceReady = $true
+              echo "✅ Service is ready after $attempt seconds"
+            }
+          } catch {
+            echo "Attempt $attempt/$maxAttempts - Service not ready yet..."
+          }
+        }
+        
+        if (-not $serviceReady) {
+          echo "❌ Service failed to start within $maxAttempts seconds"
+          exit 1
+        }
         
     - name: Test health endpoint
       run: |
@@ -166,10 +188,10 @@ jobs:
       if: always()
       run: |
         echo "Stopping web service..."
-        $pid = "${{ steps.start_service.outputs.SERVICE_PID }}"
-        if ($pid) {
+        $servicePid = "${{ steps.start_service.outputs.SERVICE_PID }}"
+        if ($servicePid) {
           try {
-            Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
+            Stop-Process -Id $servicePid -Force -ErrorAction SilentlyContinue
             echo "✅ Service stopped"
           } catch {
             echo "⚠️ Service may have already stopped"

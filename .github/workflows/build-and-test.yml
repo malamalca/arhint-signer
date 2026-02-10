@@ -56,34 +56,48 @@ jobs:
           exit 1
         }
         
-    - name: Reserve HTTP URL (requires admin)
+    - name: Reserve HTTP URL
       run: |
-        echo "Attempting to reserve HTTP URL..."
-        try {
-          netsh http add urlacl url=http://+:8082/ user=Everyone
-          echo "✅ HTTP URL reserved successfully"
-        } catch {
-          echo "⚠️ URL reservation failed (may already exist or need admin rights)"
-        }
-      continue-on-error: true
+        echo "Reserving HTTP URL..."
+        # Delete existing reservation if present
+        netsh http delete urlacl url=http://+:8082/ 2>$null
+        # Add new reservation for the current user and NETWORK SERVICE
+        netsh http add urlacl url=http://+:8082/ user=Everyone
+        echo "✅ HTTP URL reserved successfully"
         
     - name: Start web service
       id: start_service
       run: |
         echo "Starting ArhintSigner web service..."
-        $process = Start-Process -FilePath "release\arhint-signer.exe" -ArgumentList "8082" -PassThru -WindowStyle Hidden
+        $process = Start-Process -FilePath "release\arhint-signer.exe" -ArgumentList "8082" -PassThru -RedirectStandardOutput "service-output.log" -RedirectStandardError "service-error.log" -NoNewWindow
         echo "SERVICE_PID=$($process.Id)" >> $env:GITHUB_OUTPUT
         echo "✅ Service started with PID: $($process.Id)"
         
         # Wait for service to be ready
         echo "Waiting for service to initialize..."
-        $maxAttempts = 20
+        $maxAttempts = 15
         $attempt = 0
         $serviceReady = $false
         
         while ($attempt -lt $maxAttempts -and -not $serviceReady) {
           Start-Sleep -Seconds 1
           $attempt++
+          
+          # Check if process is still running
+          $proc = Get-Process -Id $process.Id -ErrorAction SilentlyContinue
+          if (-not $proc) {
+            echo "❌ Service process has exited unexpectedly"
+            if (Test-Path "service-error.log") {
+              echo "Error log content:"
+              Get-Content "service-error.log"
+            }
+            if (Test-Path "service-output.log") {
+              echo "Output log content:"
+              Get-Content "service-output.log"
+            }
+            exit 1
+          }
+          
           try {
             $response = Invoke-WebRequest -Uri "http://localhost:8082/health" -Method GET -UseBasicParsing -TimeoutSec 2 -ErrorAction SilentlyContinue
             if ($response.StatusCode -eq 200) {
@@ -91,12 +105,21 @@ jobs:
               echo "✅ Service is ready after $attempt seconds"
             }
           } catch {
-            echo "Attempt $attempt/$maxAttempts - Service not ready yet..."
+            # Silent - just retry
           }
         }
         
         if (-not $serviceReady) {
           echo "❌ Service failed to start within $maxAttempts seconds"
+          echo "Process is still running: $(Get-Process -Id $process.Id -ErrorAction SilentlyContinue | Select-Object -ExpandProperty ProcessName)"
+          if (Test-Path "service-error.log") {
+            echo "Error log:"
+            Get-Content "service-error.log"
+          }
+          if (Test-Path "service-output.log") {
+            echo "Output log:"
+            Get-Content "service-output.log"
+          }
           exit 1
         }
         

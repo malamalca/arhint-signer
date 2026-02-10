@@ -1,0 +1,195 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+      
+    - name: Setup Visual Studio Developer Command Prompt
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
+    
+    - name: Build icon generator
+      run: |
+        echo "Building icon generator..."
+        cl /std:c++17 /EHsc resources\icon\create-icon.cpp /Fe:resources\icon\create-icon.exe /link gdi32.lib user32.lib
+        
+    - name: Generate icons
+      run: |
+        echo "Generating icon files..."
+        cd resources\icon
+        .\create-icon.exe
+        cd ..\..
+        
+    - name: Compile resources
+      run: |
+        echo "Compiling resources..."
+        rc /fo resources\app-resource.res resources\app-resource.rc
+        
+    - name: Build application
+      run: |
+        echo "Building ArhintSigner Web Service..."
+        mkdir release -Force
+        cl /std:c++17 /EHsc /O2 /W3 /I"src/include" src\arhint-signer.cpp resources\app-resource.res /Fe:release\arhint-signer.exe /link /SUBSYSTEM:WINDOWS /ENTRY:WinMainCRTStartup httpapi.lib crypt32.lib ncrypt.lib ws2_32.lib advapi32.lib shell32.lib user32.lib
+        
+    - name: Verify build output
+      run: |
+        if (Test-Path "release\arhint-signer.exe") {
+          echo "✅ Build successful: arhint-signer.exe created"
+          $fileInfo = Get-Item "release\arhint-signer.exe"
+          echo "File size: $($fileInfo.Length) bytes"
+          echo "Created: $($fileInfo.CreationTime)"
+        } else {
+          echo "❌ Build failed: arhint-signer.exe not found"
+          exit 1
+        }
+        
+    - name: Reserve HTTP URL (requires admin)
+      run: |
+        echo "Attempting to reserve HTTP URL..."
+        try {
+          netsh http add urlacl url=http://+:8082/ user=Everyone
+          echo "✅ HTTP URL reserved successfully"
+        } catch {
+          echo "⚠️ URL reservation failed (may already exist or need admin rights)"
+        }
+      continue-on-error: true
+        
+    - name: Start web service
+      id: start_service
+      run: |
+        echo "Starting ArhintSigner web service..."
+        $process = Start-Process -FilePath "release\arhint-signer.exe" -ArgumentList "8082" -PassThru -WindowStyle Hidden
+        echo "SERVICE_PID=$($process.Id)" >> $env:GITHUB_OUTPUT
+        echo "✅ Service started with PID: $($process.Id)"
+        Start-Sleep -Seconds 3
+        
+    - name: Test health endpoint
+      run: |
+        echo "Testing health endpoint..."
+        try {
+          $response = Invoke-WebRequest -Uri "http://localhost:8082/health" -Method GET -UseBasicParsing
+          echo "Status Code: $($response.StatusCode)"
+          echo "Response: $($response.Content)"
+          
+          if ($response.StatusCode -eq 200) {
+            echo "✅ Health check passed"
+          } else {
+            echo "❌ Health check failed with status code: $($response.StatusCode)"
+            exit 1
+          }
+        } catch {
+          echo "❌ Health check failed: $_"
+          exit 1
+        }
+        
+    - name: Test certificates endpoint
+      run: |
+        echo "Testing certificates endpoint..."
+        try {
+          $response = Invoke-WebRequest -Uri "http://localhost:8082/certificates" -Method GET -UseBasicParsing
+          echo "Status Code: $($response.StatusCode)"
+          $json = $response.Content | ConvertFrom-Json
+          
+          if ($response.StatusCode -eq 200 -and $json.certificates) {
+            echo "✅ Certificates endpoint working"
+            echo "Found $($json.certificates.Count) certificates"
+          } else {
+            echo "⚠️ Certificates endpoint returned unexpected response"
+          }
+        } catch {
+          echo "❌ Certificates endpoint test failed: $_"
+          exit 1
+        }
+        
+    - name: Test sign endpoint (should fail without valid input)
+      run: |
+        echo "Testing sign endpoint with invalid data..."
+        try {
+          $headers = @{
+            "Content-Type" = "application/json"
+          }
+          $body = @{
+            hash = ""
+            thumbprint = ""
+          } | ConvertTo-Json
+          
+          $response = Invoke-WebRequest -Uri "http://localhost:8082/sign" -Method POST -Headers $headers -Body $body -UseBasicParsing
+          
+          if ($response.StatusCode -eq 400) {
+            echo "✅ Sign endpoint correctly rejected invalid input"
+          } else {
+            echo "⚠️ Sign endpoint returned unexpected status: $($response.StatusCode)"
+          }
+        } catch {
+          $statusCode = $_.Exception.Response.StatusCode.value__
+          if ($statusCode -eq 400) {
+            echo "✅ Sign endpoint correctly rejected invalid input (400)"
+          } else {
+            echo "❌ Sign endpoint test failed: $_"
+            exit 1
+          }
+        }
+        
+    - name: Test CORS headers
+      run: |
+        echo "Testing CORS headers..."
+        try {
+          $response = Invoke-WebRequest -Uri "http://localhost:8082/health" -Method GET -UseBasicParsing
+          $corsHeader = $response.Headers["Access-Control-Allow-Origin"]
+          
+          if ($corsHeader -eq "*") {
+            echo "✅ CORS headers present and correct"
+          } else {
+            echo "⚠️ CORS header missing or incorrect: $corsHeader"
+          }
+        } catch {
+          echo "❌ CORS test failed: $_"
+          exit 1
+        }
+        
+    - name: Stop web service
+      if: always()
+      run: |
+        echo "Stopping web service..."
+        $pid = "${{ steps.start_service.outputs.SERVICE_PID }}"
+        if ($pid) {
+          try {
+            Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
+            echo "✅ Service stopped"
+          } catch {
+            echo "⚠️ Service may have already stopped"
+          }
+        }
+        
+    - name: Upload build artifacts
+      if: success()
+      uses: actions/upload-artifact@v4
+      with:
+        name: arhint-signer-build
+        path: |
+          release/arhint-signer.exe
+          examples/example-arhint-signer.html
+        retention-days: 30
+        
+    - name: Test cleanup
+      if: always()
+      run: |
+        echo "Cleaning up test resources..."
+        # Kill any remaining processes
+        Get-Process | Where-Object { $_.ProcessName -eq "arhint-signer" } | Stop-Process -Force -ErrorAction SilentlyContinue
+        echo "✅ Cleanup complete"

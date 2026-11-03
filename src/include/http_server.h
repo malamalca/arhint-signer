@@ -96,8 +96,9 @@ public:
             return false;
         }
 
-        // Add URL to listen on (use +: to match the URL reservation pattern)
-        std::wstring urlPrefix = L"http://+:" + std::to_wstring(port) + L"/";
+        // Add URL to listen on. Only localhost is used: it works without administrator rights or a URL
+        // reservation and keeps the service (which signs with the user's certificates) off the network.
+        std::wstring urlPrefix = L"http://localhost:" + std::to_wstring(port) + L"/";
         result = HttpAddUrlToUrlGroup(urlGroupId, urlPrefix.c_str(), 0, 0);
         if (result != NO_ERROR) {
             std::cerr << "HttpAddUrlToUrlGroup failed with error " << result << std::endl;

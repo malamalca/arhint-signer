@@ -55,6 +55,12 @@ Section "Program Files" SecProgram
   
   SetOutPath "$INSTDIR"
   
+  ; Remove the URL reservation made by older versions of this installer. The service listens on
+  ; http://localhost:PORT/ and needs none; a leftover http://+:PORT/ reservation made it unresponsive in CI.
+  ; The command simply fails when there is no reservation.
+  nsExec::ExecToLog 'netsh http delete urlacl url=http://+:${SERVICE_PORT}/'
+  Pop $0
+  
   ; Copy main executable
   File "..\release\arhint-signer.exe"
   

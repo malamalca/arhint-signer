@@ -11,16 +11,34 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
-      
+      uses: actions/checkout@v6
+
     - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v2
-      
+      uses: microsoft/setup-msbuild@v3
+
+    # ilammy/msvc-dev-cmd is not maintained any more and still runs on Node.js 20, so the environment of the
+    # Visual Studio developer command prompt (x64) is exported by hand: every variable that vcvars64.bat
+    # sets or changes is passed on to the following steps through GITHUB_ENV.
     - name: Setup Visual Studio Developer Command Prompt
-      uses: ilammy/msvc-dev-cmd@v1
-      with:
-        arch: x64
-    
+      shell: pwsh
+      run: |
+        $vsPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+        if (-not $vsPath) {
+          echo "❌ Visual Studio with the C++ tools was not found"
+          exit 1
+        }
+        $vcvars = Join-Path $vsPath "VC\Auxiliary\Build\vcvars64.bat"
+        $before = @{}
+        Get-ChildItem Env: | ForEach-Object { $before[$_.Name] = $_.Value }
+        cmd /c "`"$vcvars`" >nul && set" | ForEach-Object {
+          if ($_ -match '^([^=]+)=(.*)$') {
+            if ($before[$Matches[1]] -ne $Matches[2]) {
+              "$($Matches[1])=$($Matches[2])" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+            }
+          }
+        }
+        echo "✅ Developer command prompt (x64) from $vsPath"
+
     - name: Build icon generator
       run: |
         echo "Building icon generator..."
@@ -279,7 +297,7 @@ jobs:
         
     - name: Upload build artifacts
       if: success()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: arhint-signer-build
         path: |

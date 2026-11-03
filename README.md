@@ -124,17 +124,20 @@ History:
 - Commit `fd67019` ("Actions Update", 2026-02-10, made while the GitHub Actions workflow was being set up)
   changed the prefix to `http://+:PORT/` with the comment *"use +: to match the URL reservation pattern"*. The
   installer and the CI workflow both reserve `http://+:8082/`, and the code was changed to match it. The
-  commit message gives no other reason. The GitHub Actions runs of that day show that the CI job failed with
-  `localhost` and (some of them) passed with `+`; why `localhost` did not work on the runner was not established.
+  commit message gives no other reason. The CI job failed with `localhost` as long as the workflow also reserved
+  `http://+:8082/` before starting the service (the service started but did not answer), and it passed once the
+  workflow stopped making that reservation (observed on `windows-latest`; the mechanism was not investigated).
 - Side effects of that change: the service no longer started without the reservation (`HttpAddUrlToUrlGroup
   failed`, exit code 1), it became reachable from the network although it signs with the certificates of the
   logged-in user and answers every origin (`Access-Control-Allow-Origin: *`), and it contradicted the
   "Network Binding" note below. `shutdown()` also kept removing the `localhost` URL it had never registered.
 - The prefix was changed back to `http://localhost:PORT/`.
 
-The installer no longer makes a reservation (older installers did, and the CI workflow still does). An existing
-reservation for `http://+:8082/` is harmless and can stay, or be removed with
-`netsh http delete urlacl url=http://+:8082/` (the uninstaller removes it too).
+Neither the installer nor the CI workflow makes a reservation any more. **A leftover reservation for
+`http://+:8082/` (made by older installers) should be removed**, because in CI the service did not answer on
+`localhost` while such a reservation existed. Remove it as Administrator with
+`netsh http delete urlacl url=http://+:8082/`; the installer and the uninstaller do it too. If the service starts
+but does not respond after an update from an older version, check `netsh http show urlacl`.
 
 If you really need the wildcard (access from another machine or under another host name), change `urlPrefix`
 in `src/include/http_server.h` to `http://+:PORT/`, reserve it once as Administrator
@@ -337,8 +340,8 @@ async function example() {
 1. The port is already used by another program (for example error 183, already exists). Close the other instance or start the service
    on another port: `arhint-signer.exe 9090`.
 2. The executable was built from a version that listens on `http://+:PORT/` (commit `fd67019` up to the
-   change described in [Listening Address](#listening-address)). Rebuild from the current source, or as a
-   workaround reserve the URL as Administrator:
+   change described in [Listening Address](#listening-address)). Rebuild from the current source. Only such an
+   old build needs a reservation (the current build must run without one, see above):
 ```bash
 netsh http add urlacl url=http://+:8082/ user=Everyone
 ```

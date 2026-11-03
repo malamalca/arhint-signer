@@ -31,7 +31,9 @@
 The service listens on `http://localhost:8082/`, which a normal user may register without any reservation or
 administrator rights. Earlier builds listened on `http://+:8082/` and therefore needed the reservation
 (made by older installers or with `netsh http add urlacl url=http://+:8082/ user=Everyone` as Administrator).
-The current installer does not make one. See "Listening Address" in README.md for the reason of the change.
+The current installer does not make one and removes a leftover one, because while such a reservation existed the
+service did not answer on `localhost` in our CI. If the service starts but does not respond, run
+`netsh http delete urlacl url=http://+:8082/` as Administrator. See "Listening Address" in README.md.
 
 Open the service as `http://localhost:8082/` (not `127.0.0.1`).
 
@@ -107,8 +109,9 @@ console.log(signData.result); // Base64 signature
 
 **Solution**:
 1. Close any other running ArhintSigner instance, or start the service on another port.
-2. Install the current version. As a workaround for an older build, run
-   `netsh http add urlacl url=http://+:8082/ user=Everyone` as Administrator.
+2. Install the current version and remove a leftover reservation with
+   `netsh http delete urlacl url=http://+:8082/` (as Administrator). Only an old build that listens on
+   `http://+:8082/` needs the reservation (`netsh http add urlacl url=http://+:8082/ user=Everyone`).
 
 ### "Service is not running" in Example Page
 

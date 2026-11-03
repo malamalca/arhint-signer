@@ -30,7 +30,7 @@ HTML Page → HTTP Request → C++ Web Service (HTTP.sys)
 - **Windows 10/11** (or Windows Server 2016+)
 - **MinGW-w64** with g++ compiler
 - **Windows SDK** (for HTTP API and crypto libraries)
-- **Administrator privileges** (first run only, to reserve URL)
+- No administrator privileges are needed to run the service (see [Listening Address](#listening-address))
 
 ## Installation
 
@@ -39,14 +39,12 @@ HTML Page → HTTP Request → C++ Web Service (HTTP.sys)
 1. **Download or build the installer**: `ArhintSigner-Setup.exe`
 2. **Run the installer** (requires Administrator privileges)
 3. **Follow the installation wizard**
-4. **Choose to reserve HTTP URL** when prompted (recommended)
-5. **Start the service** from Start Menu or Desktop shortcut
+4. **Start the service** from Start Menu or Desktop shortcut
 
 The installer will:
 - ✅ Install the web service executable
 - ✅ Create Start Menu shortcuts
 - ✅ Create Desktop shortcut
-- ✅ Optionally reserve the HTTP URL
 - ✅ Install example HTML page and documentation
 
 ### Manual Installation
@@ -105,15 +103,41 @@ This creates `ArhintSigner-Setup.exe` ready for distribution.
 
 ## Running the Service
 
-### First Time Setup
+### Listening Address
 
-The first time you run the service, you need to reserve the HTTP URL. Run as **Administrator**:
+The service listens on `http://localhost:PORT/` (default port 8082). **No administrator rights and no URL
+reservation (`netsh http add urlacl`) are needed.** Use `localhost` in the URL; a request to `127.0.0.1` is
+answered with `400 Bad Request` because the host name does not match the registered URL.
 
-```bash
-netsh http add urlacl url=http://+:8082/ user=Everyone
-```
+#### Why `localhost` and not `+`
 
-This only needs to be done once. It allows non-admin users to run the service on port 8082.
+Windows HTTP.sys accepts two kinds of URL prefixes, and the choice matters:
+
+| Prefix | Reachable from | Needs |
+|--------|----------------|-------|
+| `http://localhost:8082/` | this machine only | nothing (works for a normal user) |
+| `http://+:8082/` | every network interface | URL reservation made as Administrator, otherwise `HttpAddUrlToUrlGroup` fails |
+
+History:
+
+- The first versions registered `http://localhost:PORT/`.
+- Commit `fd67019` ("Actions Update", 2026-02-10, made while the GitHub Actions workflow was being set up)
+  changed the prefix to `http://+:PORT/` with the comment *"use +: to match the URL reservation pattern"*. The
+  installer and the CI workflow both reserve `http://+:8082/`, and the code was changed to match it. The
+  repository does not record any other reason (for example a specific CI failure with `localhost`).
+- Side effects of that change: the service no longer started without the reservation (`HttpAddUrlToUrlGroup
+  failed`, exit code 1), it became reachable from the network although it signs with the certificates of the
+  logged-in user and answers every origin (`Access-Control-Allow-Origin: *`), and it contradicted the
+  "Network Binding" note below. `shutdown()` also kept removing the `localhost` URL it had never registered.
+- The prefix was changed back to `http://localhost:PORT/`.
+
+The installer no longer makes a reservation (older installers did, and the CI workflow still does). An existing
+reservation for `http://+:8082/` is harmless and can stay, or be removed with
+`netsh http delete urlacl url=http://+:8082/` (the uninstaller removes it too).
+
+If you really need the wildcard (access from another machine or under another host name), change `urlPrefix`
+in `src/include/http_server.h` to `http://+:PORT/`, reserve it once as Administrator
+(`netsh http add urlacl url=http://+:8082/ user=Everyone`) and read the security notes below first.
 
 ### Starting the Service
 
@@ -308,7 +332,12 @@ async function example() {
 
 ### Error: "HttpAddUrlToUrlGroup failed"
 
-**Solution:** Reserve the URL as Administrator:
+**Possible causes:**
+1. The port is already used by another program (for example error 183, already exists). Close the other instance or start the service
+   on another port: `arhint-signer.exe 9090`.
+2. The executable was built from a version that listens on `http://+:PORT/` (commit `fd67019` up to the
+   change described in [Listening Address](#listening-address)). Rebuild from the current source, or as a
+   workaround reserve the URL as Administrator:
 ```bash
 netsh http add urlacl url=http://+:8082/ user=Everyone
 ```

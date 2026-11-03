@@ -58,8 +58,8 @@ int main(int argc, char* argv[]) {
     
     if (!server.initialize()) {
         std::cerr << "Failed to initialize HTTP server on port " << port << std::endl;
-        std::cerr << "Make sure the URL is reserved:" << std::endl;
-        std::cerr << "netsh http add urlacl url=http://+:" << port << "/ user=Everyone" << std::endl;
+        std::cerr << "The port may be used by another instance or program. Close it or start the service on "
+                  << "another port, e.g. arhint-signer.exe 9090" << std::endl;
         return 1;
     }
 
@@ -95,8 +95,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     if (!server.initialize()) {
         // Show error in message box since no console exists
         std::wstring errorMsg = L"Failed to initialize HTTP server on port " + std::to_wstring(port) + 
-                               L"\n\nMake sure the URL is reserved:\nnetsh http add urlacl url=http://+:" + 
-                               std::to_wstring(port) + L"/ user=Everyone";
+                               L"\n\nThe port may be used by another ArhintSigner instance or another program. "
+                               L"Close it or start the service on another port (e.g. arhint-signer.exe 9090).";
         MessageBoxW(NULL, errorMsg.c_str(), L"ArhintSigner Error", MB_ICONERROR | MB_OK);
         return 1;
     }

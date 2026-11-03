@@ -47,7 +47,8 @@ arhint-signer/
 **Class:** `HttpServer`
 - Server lifecycle management (initialize, shutdown)
 - HTTP.sys API configuration
-- URL registration and binding
+- URL registration and binding (registers `http://localhost:PORT/`; the wildcard `http://+:PORT/` was used
+  between commit `fd67019` and its reversal, see "Listening Address" in README.md)
 - Request processing loop
 - RAII-compliant resource management
 

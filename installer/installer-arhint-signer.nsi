@@ -48,20 +48,6 @@ VIAddVersionKey "FileVersion" "${APP_VERSION}"
 VIAddVersionKey "LegalCopyright" "Copyright (C) 2025 ${PUBLISHER}"
 
 ;--------------------------------
-; Helper Functions
-
-Function ReserveURL
-  ; Reserve HTTP URL using netsh
-  nsExec::ExecToLog 'netsh http add urlacl url=http://+:${SERVICE_PORT}/ user=Everyone'
-  Pop $0
-  ${If} $0 == 0
-    MessageBox MB_OK "HTTP URL reserved successfully.$\nThe web service can now run without administrator privileges."
-  ${Else}
-    MessageBox MB_OK "Failed to reserve HTTP URL.$\nYou may need to run as Administrator."
-  ${EndIf}
-FunctionEnd
-
-;--------------------------------
 ; Installer Sections
 
 Section "Program Files" SecProgram
@@ -108,11 +94,6 @@ Section "Program Files" SecProgram
   WriteRegStr HKLM "Software\${APP_SHORT_NAME}" "Version" "${APP_VERSION}"
 SectionEnd
 
-Section "Reserve HTTP URL" SecReserveURL
-  ; Reserve HTTP URL for non-admin users
-  Call ReserveURL
-SectionEnd
-
 Section "Auto-start on Windows Startup" SecAutoStart
   ; Add registry entry to auto-start the service on Windows boot
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "${APP_SHORT_NAME}" "$INSTDIR\arhint-signer.exe"
@@ -123,7 +104,6 @@ SectionEnd
 
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
   !insertmacro MUI_DESCRIPTION_TEXT ${SecProgram} "Install the ${APP_NAME} executable and related files."
-  !insertmacro MUI_DESCRIPTION_TEXT ${SecReserveURL} "Reserve HTTP URL to allow the service to run without administrator privileges."
   !insertmacro MUI_DESCRIPTION_TEXT ${SecAutoStart} "Automatically start the web service when Windows starts."
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
@@ -132,7 +112,8 @@ SectionEnd
 
 Section "Uninstall"
   
-  ; Remove HTTP URL reservation
+  ; The service listens on http://localhost:PORT/ and needs no URL reservation. Older versions of the installer
+  ; made one for http://+:PORT/; remove it if it exists (the command simply fails when there is none).
   nsExec::ExecToLog 'netsh http delete urlacl url=http://+:${SERVICE_PORT}/'
   
   ; Remove auto-start registry entry

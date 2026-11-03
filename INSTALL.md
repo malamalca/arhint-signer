@@ -4,8 +4,7 @@
 
 1. **Run the installer**: `ArhintSigner-Setup.exe`
 2. **Follow the installation wizard**
-3. **When prompted, check "Reserve HTTP URL"** (recommended)
-4. **Click "Start ArhintSigner Web Service"** on the final screen
+3. **Click "Start ArhintSigner Web Service"** on the final screen
 
 ## What Gets Installed
 
@@ -17,7 +16,6 @@
 - **Start Menu**: "ArhintSigner Web Service"
   - Start Web Service
   - Open Example Page
-  - Reserve HTTP URL (Admin)
   - Installation Folder
   - README
   - Uninstall
@@ -28,18 +26,14 @@
 
 ## First Time Setup
 
-### Reserve the HTTP URL (Important!)
+### HTTP URL reservation (not required)
 
-The service needs permission to listen on port 8082. You have two options:
+The service listens on `http://localhost:8082/`, which a normal user may register without any reservation or
+administrator rights. Earlier builds listened on `http://+:8082/` and therefore needed the reservation
+(made by older installers or with `netsh http add urlacl url=http://+:8082/ user=Everyone` as Administrator).
+The current installer does not make one. See "Listening Address" in README.md for the reason of the change.
 
-**Option 1: During Installation**
-- Check the box "Reserve HTTP URL (Recommended)" on the final screen
-
-**Option 2: After Installation**
-- Go to Start Menu → ArhintSigner Web Service → "Reserve HTTP URL (Admin)"
-- Right-click and select "Run as Administrator"
-
-This only needs to be done once.
+Open the service as `http://localhost:8082/` (not `127.0.0.1`).
 
 ### Auto-start Configuration (Optional)
 
@@ -108,11 +102,13 @@ console.log(signData.result); // Base64 signature
 
 ### "HttpAddUrlToUrlGroup failed" Error
 
-**Problem**: URL not reserved
+**Problem**: the port is used by another program, or the executable is an older build that listens on
+`http://+:8082/` and needs a URL reservation.
 
-**Solution**: 
-1. Go to Start Menu → ArhintSigner Web Service → "Reserve HTTP URL (Admin)"
-2. Right-click and "Run as Administrator"
+**Solution**:
+1. Close any other running ArhintSigner instance, or start the service on another port.
+2. Install the current version. As a workaround for an older build, run
+   `netsh http add urlacl url=http://+:8082/ user=Everyone` as Administrator.
 
 ### "Service is not running" in Example Page
 
@@ -142,7 +138,7 @@ const SERVICE_URL = 'http://localhost:9090';
 The uninstaller will:
 - Remove all installed files
 - Remove Start Menu and Desktop shortcuts
-- Remove the HTTP URL reservation
+- Remove the HTTP URL reservation (if one was made)
 - Clean up registry entries
 
 ## Requirements

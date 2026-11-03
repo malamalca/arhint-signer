@@ -124,7 +124,8 @@ History:
 - Commit `fd67019` ("Actions Update", 2026-02-10, made while the GitHub Actions workflow was being set up)
   changed the prefix to `http://+:PORT/` with the comment *"use +: to match the URL reservation pattern"*. The
   installer and the CI workflow both reserve `http://+:8082/`, and the code was changed to match it. The
-  repository does not record any other reason (for example a specific CI failure with `localhost`).
+  commit message gives no other reason. The GitHub Actions runs of that day show that the CI job failed with
+  `localhost` and (some of them) passed with `+`; why `localhost` did not work on the runner was not established.
 - Side effects of that change: the service no longer started without the reservation (`HttpAddUrlToUrlGroup
   failed`, exit code 1), it became reachable from the network although it signs with the certificates of the
   logged-in user and answers every origin (`Access-Control-Allow-Origin: *`), and it contradicted the

@@ -61,15 +61,12 @@ jobs:
           exit 1
         }
         
-    - name: Reserve HTTP URL
+    # The service listens on http://localhost:8082/ and needs no URL reservation, so none is made here: the test
+    # should run in the same conditions as a normal installation.
+    - name: Show HTTP URL reservations
       run: |
-        echo "Reserving HTTP URL..."
-        # Delete existing reservation if present
-        netsh http delete urlacl url=http://+:8082/ 2>$null
-        # Add new reservation for the current user and NETWORK SERVICE
-        netsh http add urlacl url=http://+:8082/ user=Everyone
-        echo "✅ HTTP URL reserved successfully"
-        
+        netsh http show urlacl
+
     - name: Start web service and run tests
       run: |
         echo "Starting ArhintSigner web service (test mode)..."
@@ -108,14 +105,28 @@ jobs:
                 echo "✅ Service is ready after $attempt seconds"
               }
             } catch {
+              $lastError = $_.Exception.Message
               if ($attempt % 5 -eq 0) {
-                echo "Attempt $attempt/$maxAttempts..."
+                echo "Attempt $attempt/$maxAttempts... ($lastError)"
               }
             }
           }
-          
+
           if (-not $serviceReady) {
             echo "❌ Service failed to respond within $maxAttempts seconds"
+            echo "Last error: $lastError"
+            echo "Process still running: $(-not $process.HasExited)"
+            echo "--- HTTP.sys request queues ---"
+            netsh http show servicestate view=requestq | Select-Object -First 40
+            echo "--- probing other addresses ---"
+            foreach ($probe in @("http://localhost:8082/", "http://127.0.0.1:8082/", "http://[::1]:8082/")) {
+              try {
+                $r = Invoke-WebRequest -Uri $probe -Method GET -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop
+                echo "$probe -> $($r.StatusCode)"
+              } catch {
+                echo "$probe -> $($_.Exception.Message)"
+              }
+            }
             exit 1
           }
           
